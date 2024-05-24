@@ -20,3 +20,18 @@ func runSysBenchCommand(numThreads, maxTime, version string) (string, error) {
 	output, err := command.CombinedOutput()
 	return string(output), err
 }
+
+func SysBenchTest(language string) string {
+	var result string
+	return result
+}
+
+func GeekBenchTest(language string) string {
+	var result string
+	return result
+}
+
+func WinsatTest(language string) string {
+	var result string
+	return result
+}
