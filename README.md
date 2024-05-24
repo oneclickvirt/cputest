@@ -16,9 +16,9 @@ CPU测试模块 (CPU Test Module)
 - [x] 以```-t```指定测试的线程数，可指定```single```或```multi```，默认不指定时使用单线程进行测试
 - [ ] 全平台编译支持
 
-注意：默认不自动安装```sysbench```或```geekbench```组件，如需使用请自行安装后再使用本项目，如```apt update && apt install sysbench -y```
+注意：默认不自动安装```sysbench```组件，如需使用请自行安装后再使用本项目，如```apt update && apt install sysbench -y```
 
-注意：```geekbench```测试不支持离线操作，需要确保宿主机存在IPV4网络时才能进行测试，纯IPV6网络也不能进行测试。
+注意：```geekbench```测试不支持离线操作且不支持x86以外的架构，需要确保宿主机存在IPV4网络时才能进行测试，纯IPV6网络也不能进行测试。
 
 # 使用(Usage)
 
