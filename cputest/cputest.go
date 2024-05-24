@@ -94,6 +94,7 @@ func SysBenchTest(language, testThread string) string {
 
 func GeekBenchTest(language, testThread string) string {
 	var result string
+	// https://github.com/masonr/yet-another-bench-script/blob/0ad4c4e85694dbcf0958d8045c2399dbd0f9298c/yabs.sh#L894
 	return result
 }
 
