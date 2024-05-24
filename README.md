@@ -18,6 +18,8 @@ CPU测试模块 (CPU Test Module)
 
 注意：默认不自动安装```sysbench```或```geekbench```组件，如需使用请自行安装后再使用本项目，如```apt update && apt install sysbench -y```
 
+注意：```geekbench```测试不支持离线操作，需要确保宿主机存在IPV4网络时才能进行测试，纯IPV6网络也不能进行测试。
+
 # 使用(Usage)
 
 ```
