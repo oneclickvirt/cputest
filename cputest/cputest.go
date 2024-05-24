@@ -95,6 +95,19 @@ func SysBenchTest(language, testThread string) string {
 func GeekBenchTest(language, testThread string) string {
 	var result string
 	// https://github.com/masonr/yet-another-bench-script/blob/0ad4c4e85694dbcf0958d8045c2399dbd0f9298c/yabs.sh#L894
+
+	// 执行 geekbench 进行测试，有问题时才使用后续判断判断是什么造成的
+	
+	// 检测本机是否存在IPV4网络，不存在时无法使用 geekbench 进行测试
+	
+	// 检测存在 /etc/os-release 文件且含 CentOS Linux 7 时，需要预先下载 GLIBC_2.27 才能使用 geekbench 6
+
+	// 除了 geekbench 4 , 更高版本的 geekbench需要本机至少有 1 GB 内存
+
+	// 其他错误类型直接打印输出
+
+	// 解析 geekbench 执行结果
+	
 	return result
 }
 
