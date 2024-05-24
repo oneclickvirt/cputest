@@ -8,11 +8,12 @@ CPU测试模块 (CPU Test Module)
 
 # 功能(Features)
 
-- [ ] 使用```sysbench```测试CPU得分
+- [x] 使用```sysbench```测试CPU得分
 - [ ] 使用```geekbench```测试CPU得分
-- [ ] 使用```winsat```测试CPU得分
-- [ ] 以```-l```指定输出的语言类型，可指定```zh```或```en```，默认不指定时使用中文输出
-- [ ] 以```-m```指定测试的方法，可指定```sysbench```或```geekbench```，默认不指定时使用```sysbench```进行测试
+- [x] 使用```winsat```测试CPU得分
+- [x] 以```-l```指定输出的语言类型，可指定```zh```或```en```，默认不指定时使用中文输出
+- [x] 以```-m```指定测试的方法，可指定```sysbench```或```geekbench```，默认不指定时使用```sysbench```进行测试
+- [x] 以```-t```指定测试的线程数，默认不指定时使用单线程进行测试
 - [ ] 全平台编译支持
 
 注意：默认不自动安装```sysbench```或```geekbench```组件，如需使用请自行安装后再使用本项目，如```apt update && apt install sysbench -y```

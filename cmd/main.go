@@ -49,7 +49,5 @@ func main() {
 			res = cputest.GeekBenchTest(language, testThread)
 		}
 	}
-	fmt.Println("--------------------------------------------------")
 	fmt.Printf(res)
-	fmt.Println("--------------------------------------------------")
 }
