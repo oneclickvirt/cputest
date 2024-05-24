@@ -3,6 +3,8 @@ package cputest
 import (
 	"os/exec"
 	"strings"
+	"runtime"
+	"fmt"
 )
 
 // runSysBenchCommand 执行 sysbench 命令进行测试
@@ -22,12 +24,12 @@ func runSysBenchCommand(numThreads, maxTime, version string) (string, error) {
 }
 
 func SysBenchTest(language, testThread string) string {
-	var result, TotalScore string
+	var result, singleScore, multiScore string
 	comCheck := exec.Command("sysbench", "--version")
 	output, err := comCheck.CombinedOutput()
 	if err == nil {
 		version := string(output)
-		if testThread == "" {
+		if testThread == "single" {
 			singleResult, err := runSysBenchCommand("1", "5", version)
 			if err == nil {
 				tempList := strings.Split(singleResult, "\n")
@@ -35,7 +37,7 @@ func SysBenchTest(language, testThread string) string {
 					if strings.Contains(line, "events per second:") || strings.Contains(line, "total number of events:") {
 						temp1 := strings.Split(line, ":")
 						if len(temp1) == 2 {
-							TotalScore = temp1[1]
+							singleScore = temp1[1]
 						}
 					}
 				}
@@ -45,7 +47,44 @@ func SysBenchTest(language, testThread string) string {
 			} else {
 				result += "1 线程测试(单核)得分: "
 			}
-			result += TotalScore + "\n"
+			result += singleScore + "\n"
+		} else if testThread == "multi" {
+			singleResult, err := runSysBenchCommand("1", "5", version)
+			if err == nil {
+				tempList := strings.Split(singleResult, "\n")
+				for _, line := range tempList {
+					if strings.Contains(line, "events per second:") || strings.Contains(line, "total number of events:") {
+						temp1 := strings.Split(line, ":")
+						if len(temp1) == 2 {
+							singleScore = temp1[1]
+						}
+					}
+				}
+			}
+			if language == "en" {
+				result += "1 Thread(s) Test: "
+			} else {
+				result += "1 线程测试(单核)得分: "
+			}
+			result += singleScore + "\n"
+			multiResult, err := runSysBenchCommand(fmt.Sprintf("%s", runtime.NumCPU()), "5", version)
+			if err == nil {
+				tempList := strings.Split(multiResult, "\n")
+				for _, line := range tempList {
+					if strings.Contains(line, "events per second:") || strings.Contains(line, "total number of events:") {
+						temp1 := strings.Split(line, ":")
+						if len(temp1) == 2 {
+							multiScore = temp1[1]
+						}
+					}
+				}
+			}
+			if language == "en" {
+				result += fmt.Sprintf("%s", runtime.NumCPU()) + " Thread(s) Test: "
+			} else {
+				result += fmt.Sprintf("%s", runtime.NumCPU()) + " 线程测试(多核)得分: "
+			}
+			result += multiScore + "\n"
 		}
 	} else {
 		return ""
