@@ -95,7 +95,9 @@ func SysBenchTest(language, testThread string) string {
 func GeekBenchTest(language, testThread string) string {
 	var result string
 	// https://github.com/masonr/yet-another-bench-script/blob/0ad4c4e85694dbcf0958d8045c2399dbd0f9298c/yabs.sh#L894
-	//
+
+	// 下载 geekbench 进行测试，优先级 6 > 5 > 4
+	
 	// 执行 geekbench 进行测试，有问题时才使用后续判断判断是什么造成的
 
 	// 检测本机是否存在IPV4网络，不存在时无法使用 geekbench 进行测试
@@ -104,7 +106,7 @@ func GeekBenchTest(language, testThread string) string {
 
 	// 除了 geekbench 4 , 更高版本的 geekbench需要本机至少有 1 GB 内存
 
-	// geekbench 不支持非 x86 之外的架构
+	// geekbench 不支持 x86 之外的架构
 
 	// 解析 geekbench 执行结果
 
