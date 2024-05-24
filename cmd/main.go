@@ -18,8 +18,9 @@ func main() {
 	fmt.Println(Green("项目地址:"), Yellow("https://github.com/oneclickvirt/cpuTest"))
 	languagePtr := flag.String("l", "", "Language parameter (en or zh)")
 	testMethodPtr := flag.String("m", "", "Specific Test Method (sysbench or geekbench)")
+	testThreadsPtr := flag.String("t", "", "Specific Test Threads")
 	flag.Parse()
-	var language, res, testMethod string
+	var language, res, testMethod, testThread string
 	if *languagePtr == "" {
 		language = "zh"
 	} else {
@@ -30,17 +31,22 @@ func main() {
 	} else if *testMethodPtr == "geekbench" {
 		testMethod = "geekbench"
 	}
+	if *testThreadsPtr == "" {
+		testThread = ""
+	} else {
+		testThread = strings.TrimSpace(*testThreadsPtr)
+	}
 	if runtime.GOOS == "windows" {
-		res = cputest.WinsatTest(language)
+		res = cputest.WinsatTest(language, testThread)
 	} else {
 		if testMethod == "sysbench" {
-			res = cputest.SysBenchTest(language)
+			res = cputest.SysBenchTest(language, testThread)
 			if res == "" {
 				res = "sysbench test failed, switch to use dd test.\n"
-				res += cputest.GeekBenchTest(language)
+				res += cputest.GeekBenchTest(language, testThread)
 			}
 		} else if testMethod == "geekbench" {
-			res = cputest.GeekBenchTest(language)
+			res = cputest.GeekBenchTest(language, testThread)
 		}
 	}
 	fmt.Println("--------------------------------------------------")

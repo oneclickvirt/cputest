@@ -21,17 +21,29 @@ func runSysBenchCommand(numThreads, maxTime, version string) (string, error) {
 	return string(output), err
 }
 
-func SysBenchTest(language string) string {
+func SysBenchTest(language, testThread string) string {
+	var result string
+	comCheck := exec.Command("sysbench", "--version")
+	output, err := comCheck.CombinedOutput()
+	if err == nil {
+		version := string(output)
+		if testThread == "" {
+			singleResult, err := runSysBenchCommand("1", "5", version)
+
+		}
+
+	} else {
+		return ""
+	}
+	return result
+}
+
+func GeekBenchTest(language, testThread string) string {
 	var result string
 	return result
 }
 
-func GeekBenchTest(language string) string {
-	var result string
-	return result
-}
-
-func WinsatTest(language string) string {
+func WinsatTest(language, testThread string) string {
 	var result string
 	cmd1 := exec.Command("winsat", "cpu", "-encryption")
 	output1, err1 := cmd1.Output()
