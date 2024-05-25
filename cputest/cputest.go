@@ -74,7 +74,7 @@ func SysBenchTest(language, testThread string) string {
 				result += "1 线程测试(单核)得分: "
 			}
 			result += singleScore + "\n"
-			multiResult, err := runSysBenchCommand(fmt.Sprintf("%s", runtime.NumCPU()), "5", version)
+			multiResult, err := runSysBenchCommand(fmt.Sprintf("%d", runtime.NumCPU()), "5", version)
 			if err == nil {
 				tempList := strings.Split(multiResult, "\n")
 				for _, line := range tempList {
