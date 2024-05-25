@@ -1,7 +1,9 @@
 package cputest
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -86,32 +88,63 @@ func SysBenchTest(language, testThread string) string {
 			}
 			result += multiScore + "\n"
 		}
-	} else {
-		return ""
 	}
 	return result
 }
 
+// runGeekbenchCommand 执行 geekbench 命令进行测试
+func runGeekbenchCommand() (string, error) {
+	var command *exec.Cmd
+	command = exec.Command("/tmp/geekbench", "--upload")
+	output, err := command.CombinedOutput()
+	return string(output), err
+}
+
 // GeekBenchTest 调用 geekbench 执行CPU测试
 // 调用 /tmp 下的 /tmp/geekbench 中的 geekbench 文件执行
+// https://github.com/masonr/yet-another-bench-script/blob/0ad4c4e85694dbcf0958d8045c2399dbd0f9298c/yabs.sh#L894
 func GeekBenchTest(language, testThread string) string {
-	var result string
-	// https://github.com/masonr/yet-another-bench-script/blob/0ad4c4e85694dbcf0958d8045c2399dbd0f9298c/yabs.sh#L894
-
-	// 查询 geekbench 的版本
-	
-	// 执行 geekbench 进行测试，有问题时才使用后续判断判断是什么造成的
-
-	// 检测本机是否存在IPV4网络，不存在时无法使用 geekbench 进行测试
-
-	// 检测存在 /etc/os-release 文件且含 CentOS Linux 7 时，需要预先下载 GLIBC_2.27 才能使用 geekbench 6
-
-	// 除了 geekbench 4 , 更高版本的 geekbench需要本机至少有 1 GB 内存
-
-	// geekbench 不支持 x86 之外的架构
-
-	// 解析 geekbench 执行结果
-
+	var result, singleScore, multiScore string
+	comCheck := exec.Command("/tmp/geekbench", "--version")
+	// Geekbench 5.4.5 Tryout Build 503938 (corktown-master-build 6006e737ba)
+	output, err := comCheck.CombinedOutput()
+	if err == nil {
+		version := string(output)
+		if strings.Contains(version, "Geekbench 6") {
+			// 检测存在 /etc/os-release 文件且含 CentOS Linux 7 时，需要预先下载 GLIBC_2.27 才能使用 geekbench 6
+			file, err := os.Open("/etc/os-release")
+			defer file.Close()
+			if err == nil {
+				scanner := bufio.NewScanner(file)
+				isCentOS7 := false
+				// 逐行读取文件内容
+				for scanner.Scan() {
+					line := scanner.Text()
+					if strings.Contains(line, "CentOS Linux 7") {
+						isCentOS7 = true
+						break
+					}
+				}
+				if err := scanner.Err(); err == nil {
+					// 如果文件中包含 CentOS Linux 7，则打印提示信息
+					if isCentOS7 && language == "zh" {
+						return "需要预先下载 GLIBC_2.27 才能使用 geekbench 6"
+					} else if isCentOS7 && language != "zh" {
+						return "需要预先下载 GLIBC_2.27 才能使用 geekbench 6"
+					}
+				}
+			}
+		}
+		// 检测本机是否存在IPV4网络，不存在时无法使用 geekbench 进行测试
+		// 除了 geekbench 4 , 更高版本的 geekbench需要本机至少有 1 GB 内存
+		// 解析 geekbench 执行结果
+		if strings.Contains(version, "Geekbench") {
+			tp, err := runGeekbenchCommand()
+			if err == nil {
+				result += tp
+			}
+		}
+	}
 	return result
 }
 
