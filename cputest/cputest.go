@@ -113,8 +113,8 @@ func GeekBenchTest(language, testThread string) string {
 	comCheck := exec.Command("/tmp/geekbench/geekbench", "--version")
 	// Geekbench 5.4.5 Tryout Build 503938 (corktown-master-build 6006e737ba)
 	output, err := comCheck.CombinedOutput()
+	version := string(output)
 	if err == nil {
-		version := string(output)
 		if strings.Contains(version, "Geekbench 6") {
 			// 检测存在 /etc/os-release 文件且含 CentOS Linux 7 时，需要预先下载 GLIBC_2.27 才能使用 geekbench 6
 			file, err := os.Open("/etc/os-release")
@@ -135,12 +135,11 @@ func GeekBenchTest(language, testThread string) string {
 					if isCentOS7 && language == "zh" {
 						return "需要预先下载 GLIBC_2.27 才能使用 geekbench 6"
 					} else if isCentOS7 && language != "zh" {
-						return "需要预先下载 GLIBC_2.27 才能使用 geekbench 6"
+						return "You need to pre-download GLIBC_2.27 to use geekbench 6."
 					}
 				}
 			}
 		}
-		
 		// 解析 geekbench 执行结果
 		if strings.Contains(version, "Geekbench") {
 			tp, err := runGeekbenchCommand()
@@ -157,8 +156,7 @@ func GeekBenchTest(language, testThread string) string {
 		const (
 			userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36"
 			accept    = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
-			referer   = "https://scamalytics.com"
-			urlFormat = "https://scamalytics.com/ip/%s"
+			referer   = "browser.geekbench.com"
 		)
 		request := gorequest.New().Get(link).
 			Retry(3, 6*time.Second, http.StatusBadRequest, http.StatusInternalServerError)
@@ -176,7 +174,23 @@ func GeekBenchTest(language, testThread string) string {
 		if readErr != nil {
 			return ""
 		}
-		
+		textContent := doc.Find(".table-wrapper.cpu").Text()
+		resList := strings.Split(textContent, "\n")
+		for index, l := range resList {
+			if strings.Contains(l, "Single-Core") {
+				singleScore = resList[index-1]
+			} else if strings.Contains(l, "Multi-Core") {
+				multiScore = resList[index-1]
+			}
+		}
+	}
+	if link != "" && singleScore != "" {
+		result += strings.TrimSpace(strings.ReplaceAll(version, "\n", "")) + "\n"
+		result += "Single-Core Score: " + singleScore + "\n"
+		if multiScore != "" {
+			result += "Multi-Core Score: " + multiScore + "\n"
+		}
+		result += "Link: " + link + "\n"
 	}
 	return result
 }
