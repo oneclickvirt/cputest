@@ -109,9 +109,13 @@ if [ -d /tmp/geekbench ]; then
     fi
   done
 fi
-chmod 777 /tmp/geekbench/geekbench
-/tmp/geekbench/geekbench --version
-if [ $? -ne 0 ]; then
-  echo "Geekbench failed to check the version, please leave an error message in the repository's issues."
+if [ -f /tmp/geekbench/geekbench ]; then 
+  chmod 777 /tmp/geekbench/geekbench
+  /tmp/geekbench/geekbench --version
+  if [ $? -ne 0 ]; then
+    echo "Geekbench failed to check the version, please leave an error message in the repository's issues."
+  fi
+  rm -rf /tmp/geekbench.tar.gz
+else
+  echo "Geekbench failed to download, please leave an error message in the repository's issues."
 fi
-rm -rf /tmp/geekbench.tar.gz
