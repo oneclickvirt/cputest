@@ -3,10 +3,15 @@ package cputest
 import (
 	"bufio"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
+	"time"
+
+	"github.com/PuerkitoBio/goquery"
+	"github.com/parnurzeal/gorequest"
 )
 
 // runSysBenchCommand 执行 sysbench 命令进行测试
@@ -104,7 +109,7 @@ func runGeekbenchCommand() (string, error) {
 // 调用 /tmp 下的 /tmp/geekbench 中的 geekbench 文件执行
 // https://github.com/masonr/yet-another-bench-script/blob/0ad4c4e85694dbcf0958d8045c2399dbd0f9298c/yabs.sh#L894
 func GeekBenchTest(language, testThread string) string {
-	var result, singleScore, multiScore string
+	var result, singleScore, multiScore, link string
 	comCheck := exec.Command("/tmp/geekbench/geekbench", "--version")
 	// Geekbench 5.4.5 Tryout Build 503938 (corktown-master-build 6006e737ba)
 	output, err := comCheck.CombinedOutput()
@@ -135,18 +140,43 @@ func GeekBenchTest(language, testThread string) string {
 				}
 			}
 		}
+		
 		// 解析 geekbench 执行结果
 		if strings.Contains(version, "Geekbench") {
 			tp, err := runGeekbenchCommand()
 			if err == nil {
 				tempList := strings.Split(tp, "\n")
 				for _, line := range tempList {
-					if strings.Contains(line, "") {
-
+					if strings.Contains(line, "https://browser.geekbench.com") && strings.Contains(line, "cpu") {
+						link = strings.TrimSpace(line)
+						break
 					}
 				}
 			}
 		}
+		const (
+			userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36"
+			accept    = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
+			referer   = "https://scamalytics.com"
+			urlFormat = "https://scamalytics.com/ip/%s"
+		)
+		request := gorequest.New().Get(link).
+			Retry(3, 6*time.Second, http.StatusBadRequest, http.StatusInternalServerError)
+		request.Set("User-Agent", userAgent)
+		request.Set("Accept", accept)
+		request.Set("Referer", referer)
+		response, body, err := request.End()
+		if err != nil {
+			return ""
+		}
+		if response.StatusCode != http.StatusOK {
+			return ""
+		}
+		doc, readErr := goquery.NewDocumentFromReader(strings.NewReader(body))
+		if readErr != nil {
+			return ""
+		}
+		
 	}
 	return result
 }
