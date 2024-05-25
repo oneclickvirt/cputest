@@ -33,7 +33,7 @@ case "$2" in
     ;;
 esac
 case $gbv in
-  4)
+  gb4)
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
         wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cpuTest/releases/download/${release_date}/Geekbench-4.4.4-Linux.tar.gz
@@ -44,7 +44,7 @@ case $gbv in
         ;;
     esac
     ;;
-  5)
+  gb5)
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
         wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cpuTest/releases/download/${release_date}/Geekbench-5.5.1-Linux.tar.gz
@@ -58,7 +58,7 @@ case $gbv in
         ;;
     esac
     ;;
-  6)
+  gb6)
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
         wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cpuTest/releases/download/${release_date}/Geekbench-6.3.0-Linux.tar.gz
