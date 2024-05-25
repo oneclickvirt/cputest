@@ -87,9 +87,9 @@ func SysBenchTest(language, testThread string) string {
 				}
 			}
 			if language == "en" {
-				result += fmt.Sprintf("%s", runtime.NumCPU()) + " Thread(s) Test: "
+				result += fmt.Sprintf("%d", runtime.NumCPU()) + " Thread(s) Test: "
 			} else {
-				result += fmt.Sprintf("%s", runtime.NumCPU()) + " 线程测试(多核)得分: "
+				result += fmt.Sprintf("%d", runtime.NumCPU()) + " 线程测试(多核)得分: "
 			}
 			result += multiScore + "\n"
 		}
