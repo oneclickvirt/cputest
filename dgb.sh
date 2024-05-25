@@ -6,6 +6,7 @@
 rm -rf /tmp/geekbench
 arch=$(uname -m)
 release_date="20240525"
+mypwd=$(pwd)
 if [ ! -d "/tmp" ]; then
     mkdir /tmp
 fi
@@ -37,6 +38,11 @@ case $gbv in
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
         wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cpuTest/releases/download/${release_date}/Geekbench-4.4.4-Linux.tar.gz
+        cd /tmp >/dev/null 2>&1
+        chmod 777 geekbench.tar.gz
+        tar -xvf geekbench.tar.gz
+        mv Geekbench-4.4.4-Linux /tmp/geekbench
+        cd $mypwd >/dev/null 2>&1
         ;;
       *)
         echo "Unsupported architecture: $arch"
@@ -48,9 +54,19 @@ case $gbv in
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
         wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cpuTest/releases/download/${release_date}/Geekbench-5.5.1-Linux.tar.gz
+        cd /tmp >/dev/null 2>&1
+        chmod 777 geekbench.tar.gz
+        tar -xvf geekbench.tar.gz
+        mv Geekbench-5.5.1-Linux /tmp/geekbench
+        cd $mypwd >/dev/null 2>&1
         ;;
       "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
         wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cpuTest/releases/download/${release_date}/Geekbench-5.5.1-LinuxARMPreview.tar.gz
+        cd /tmp >/dev/null 2>&1
+        chmod 777 geekbench.tar.gz
+        tar -xvf geekbench.tar.gz
+        mv Geekbench-5.5.1-LinuxARMPreview /tmp/geekbench
+        cd $mypwd >/dev/null 2>&1
         ;;
       *)
         echo "Unsupported architecture: $arch"
@@ -62,9 +78,19 @@ case $gbv in
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
         wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cpuTest/releases/download/${release_date}/Geekbench-6.3.0-Linux.tar.gz
+        cd /tmp >/dev/null 2>&1
+        chmod 777 geekbench.tar.gz
+        tar -xvf geekbench.tar.gz
+        mv Geekbench-6.3.0-Linux /tmp/geekbench
+        cd $mypwd >/dev/null 2>&1
         ;;
       "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
         wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cpuTest/releases/download/${release_date}/Geekbench-6.3.0-LinuxARMPreview.tar.gz
+        cd /tmp >/dev/null 2>&1
+        chmod 777 geekbench.tar.gz
+        tar -xvf geekbench.tar.gz
+        mv Geekbench-6.3.0-LinuxARMPreview /tmp/geekbench
+        cd $mypwd >/dev/null 2>&1
         ;;
       *)
         echo "Unsupported architecture: $arch"
@@ -74,11 +100,10 @@ case $gbv in
     ;;
 esac
 
-chmod 777 /tmp/geekbench.tar.gz
-tar -xvf /tmp/geekbench.tar.gz
-if [ -f /tmp/geekbench ]; then 
+if [ -d /tmp/geekbench ]; then
   for file in /tmp/geekbench/geekbench[0-9]*; do
     if [ -f "$file" ]; then
+      chmod 777 "$file"
       target="/tmp/geekbench/geekbench"
       mv "$file" "$target"
     fi
@@ -89,3 +114,4 @@ chmod 777 /tmp/geekbench/geekbench
 if [ $? -ne 0 ]; then
   echo "Geekbench failed to check the version, please leave an error message in the repository's issues."
 fi
+rm -rf /tmp/geekbench.tar.gz
