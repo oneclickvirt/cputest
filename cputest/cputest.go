@@ -95,7 +95,7 @@ func SysBenchTest(language, testThread string) string {
 // runGeekbenchCommand 执行 geekbench 命令进行测试
 func runGeekbenchCommand() (string, error) {
 	var command *exec.Cmd
-	command = exec.Command("/tmp/geekbench", "--upload")
+	command = exec.Command("/tmp/geekbench/geekbench", "--upload")
 	output, err := command.CombinedOutput()
 	return string(output), err
 }
@@ -105,7 +105,7 @@ func runGeekbenchCommand() (string, error) {
 // https://github.com/masonr/yet-another-bench-script/blob/0ad4c4e85694dbcf0958d8045c2399dbd0f9298c/yabs.sh#L894
 func GeekBenchTest(language, testThread string) string {
 	var result, singleScore, multiScore string
-	comCheck := exec.Command("/tmp/geekbench", "--version")
+	comCheck := exec.Command("/tmp/geekbench/geekbench", "--version")
 	// Geekbench 5.4.5 Tryout Build 503938 (corktown-master-build 6006e737ba)
 	output, err := comCheck.CombinedOutput()
 	if err == nil {
@@ -135,13 +135,16 @@ func GeekBenchTest(language, testThread string) string {
 				}
 			}
 		}
-		// 检测本机是否存在IPV4网络，不存在时无法使用 geekbench 进行测试
-		// 除了 geekbench 4 , 更高版本的 geekbench需要本机至少有 1 GB 内存
 		// 解析 geekbench 执行结果
 		if strings.Contains(version, "Geekbench") {
 			tp, err := runGeekbenchCommand()
 			if err == nil {
-				result += tp
+				tempList := strings.Split(tp, "\n")
+				for _, line := range tempList {
+					if strings.Contains(line, "") {
+
+					}
+				}
 			}
 		}
 	}

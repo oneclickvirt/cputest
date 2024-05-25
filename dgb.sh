@@ -33,6 +33,11 @@ case "$2" in
     exit 1
     ;;
 esac
+
+# 检测本机是否存在IPV4网络，不存在时无法使用 geekbench 进行测试
+# 除了 geekbench 4 , 更高版本的 geekbench需要本机至少有 1 GB 内存
+
+# 下载对应文件
 case $gbv in
   gb4)
     case $arch in
