@@ -92,11 +92,13 @@ func SysBenchTest(language, testThread string) string {
 	return result
 }
 
+// GeekBenchTest 调用 geekbench 执行CPU测试
+// 调用 /tmp 下的 /tmp/geekbench 中的 geekbench 文件执行
 func GeekBenchTest(language, testThread string) string {
 	var result string
 	// https://github.com/masonr/yet-another-bench-script/blob/0ad4c4e85694dbcf0958d8045c2399dbd0f9298c/yabs.sh#L894
 
-	// 下载 geekbench 进行测试，优先级 6 > 5 > 4
+	// 查询 geekbench 的版本
 	
 	// 执行 geekbench 进行测试，有问题时才使用后续判断判断是什么造成的
 
