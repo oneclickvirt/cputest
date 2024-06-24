@@ -55,5 +55,7 @@ func main() {
 			res = cpu.GeekBenchTest(language, testThread)
 		}
 	}
+	fmt.Println("--------------------------------------------------")
 	fmt.Printf(res)
+	fmt.Println("--------------------------------------------------")
 }
