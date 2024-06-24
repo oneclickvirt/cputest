@@ -91,6 +91,17 @@ cputest
 
 进行测试
 
+```
+Usage of cputest:
+  -l string
+        Language parameter (en or zh)
+  -m string
+        Specific Test Method (sysbench or geekbench)
+  -t string
+        Specific Test Threads (single or multi)
+  -v    show version
+```
+
 ## 在Golang中使用
 
 ```
