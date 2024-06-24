@@ -1,5 +1,5 @@
 #!/bin/bash
-#From https://github.com/oneclickvirt/cpuTest
+#From https://github.com/oneclickvirt/cputest
 #2024.05.25
 
 
@@ -42,7 +42,7 @@ case $gbv in
   gb4)
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
-        wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cpuTest/releases/download/${release_date}/Geekbench-4.4.4-Linux.tar.gz
+        wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-4.4.4-Linux.tar.gz
         cd /tmp >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
@@ -58,7 +58,7 @@ case $gbv in
   gb5)
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
-        wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cpuTest/releases/download/${release_date}/Geekbench-5.5.1-Linux.tar.gz
+        wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-5.5.1-Linux.tar.gz
         cd /tmp >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
@@ -66,7 +66,7 @@ case $gbv in
         cd $mypwd >/dev/null 2>&1
         ;;
       "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
-        wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cpuTest/releases/download/${release_date}/Geekbench-5.5.1-LinuxARMPreview.tar.gz
+        wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-5.5.1-LinuxARMPreview.tar.gz
         cd /tmp >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
@@ -82,7 +82,7 @@ case $gbv in
   gb6)
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
-        wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cpuTest/releases/download/${release_date}/Geekbench-6.3.0-Linux.tar.gz
+        wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-6.3.0-Linux.tar.gz
         cd /tmp >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
@@ -90,7 +90,7 @@ case $gbv in
         cd $mypwd >/dev/null 2>&1
         ;;
       "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
-        wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cpuTest/releases/download/${release_date}/Geekbench-6.3.0-LinuxARMPreview.tar.gz
+        wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-6.3.0-LinuxARMPreview.tar.gz
         cd /tmp >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
