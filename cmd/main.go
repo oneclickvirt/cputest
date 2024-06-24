@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/oneclickvirt/cpuTest/cputest"
-	. "github.com/oneclickvirt/cpuTest/defaultset"
+	. "github.com/oneclickvirt/defaultset"
 )
 
 func main() {
@@ -16,10 +16,16 @@ func main() {
 		http.Get("https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Foneclickvirt%2FcpuTest&count_bg=%2323E01C&title_bg=%23555555&icon=sonarcloud.svg&icon_color=%23E7E7E7&title=hits&edge_flat=false")
 	}()
 	fmt.Println(Green("项目地址:"), Yellow("https://github.com/oneclickvirt/cpuTest"))
+	var showVersion bool
+	flag.BoolVar(&showVersion, "v", false, "show version")
 	languagePtr := flag.String("l", "", "Language parameter (en or zh)")
 	testMethodPtr := flag.String("m", "", "Specific Test Method (sysbench or geekbench)")
 	testThreadsPtr := flag.String("t", "", "Specific Test Threads (single or multi)")
 	flag.Parse()
+	if showVersion {
+		fmt.Println(cputest.CpuTestVersion)
+		return
+	}
 	var language, res, testMethod, testThread string
 	if *languagePtr == "" {
 		language = "zh"
