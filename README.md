@@ -74,3 +74,9 @@ bash dgb.sh -v gb6
 ```
 curl https://raw.githubusercontent.com/oneclickvirt/cputest/main/ct_install.sh -sSf | sh
 ```
+
+## 在Golang中使用
+
+```
+go get github.com/oneclickvirt/cputest@latest
+```
