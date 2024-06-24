@@ -83,4 +83,4 @@ case $os in
 esac
 
 chmod 777 cputest
-cp cputest /usr/bin/
+cp cputest /usr/bin/cputest
