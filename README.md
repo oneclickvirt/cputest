@@ -71,9 +71,25 @@ bash dgb.sh -v gb6
 
 # 使用(Usage)
 
+下载及安装
+
 ```
 curl https://raw.githubusercontent.com/oneclickvirt/cputest/main/ct_install.sh -sSf | sh
 ```
+
+使用
+
+```
+cputest
+```
+
+或
+
+```
+./cputest
+```
+
+进行测试
 
 ## 在Golang中使用
 
