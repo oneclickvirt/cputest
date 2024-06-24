@@ -1,4 +1,4 @@
-package cputest
+package cpu
 
 import (
 	"bufio"

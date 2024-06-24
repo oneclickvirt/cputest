@@ -1,6 +1,6 @@
-# cpuTest
+# cputest
 
-[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Foneclickvirt%2FcpuTest&count_bg=%2323E01C&title_bg=%23555555&icon=sonarcloud.svg&icon_color=%23E7E7E7&title=hits&edge_flat=false)](https://hits.seeyoufarm.com) [![Build and Release](https://github.com/oneclickvirt/cpuTest/actions/workflows/main.yaml/badge.svg)](https://github.com/oneclickvirt/cpuTest/actions/workflows/main.yaml)
+[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Foneclickvirt%2Fcputest&count_bg=%2323E01C&title_bg=%23555555&icon=sonarcloud.svg&icon_color=%23E7E7E7&title=hits&edge_flat=false)](https://hits.seeyoufarm.com) [![Build and Release](https://github.com/oneclickvirt/cputest/actions/workflows/main.yaml/badge.svg)](https://github.com/oneclickvirt/cputest/actions/workflows/main.yaml)
 
 CPU测试模块 (CPU Test Module) 
 
@@ -56,7 +56,7 @@ Swap:             0           0           0
 如需使用```geekbench```请事先执行
 
 ```
-curl -L https://raw.githubusercontent.com/oneclickvirt/cpuTest/main/dgb.sh -o dgb.sh && chmod +x dgb.sh
+curl -L https://raw.githubusercontent.com/oneclickvirt/cputest/main/dgb.sh -o dgb.sh && chmod +x dgb.sh
 ```
 
 然后使用```-v```指定需要后续使用的geekbench版本```gb4```或```gb5```或```gb6```
@@ -72,5 +72,5 @@ bash dgb.sh -v gb6
 # 使用(Usage)
 
 ```
-curl https://raw.githubusercontent.com/oneclickvirt/cpuTest/main/ct_install.sh -sSf | sh
+curl https://raw.githubusercontent.com/oneclickvirt/cputest/main/ct_install.sh -sSf | sh
 ```

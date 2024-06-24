@@ -1,4 +1,4 @@
-module github.com/oneclickvirt/cpuTest
+module github.com/oneclickvirt/cputest
 
 go 1.22.4
 

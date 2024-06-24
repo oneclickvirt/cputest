@@ -7,15 +7,15 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/oneclickvirt/cpuTest/cputest"
+	"github.com/oneclickvirt/cputest/cpu"
 	. "github.com/oneclickvirt/defaultset"
 )
 
 func main() {
 	go func() {
-		http.Get("https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Foneclickvirt%2FcpuTest&count_bg=%2323E01C&title_bg=%23555555&icon=sonarcloud.svg&icon_color=%23E7E7E7&title=hits&edge_flat=false")
+		http.Get("https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Foneclickvirt%2Fcputest&count_bg=%2323E01C&title_bg=%23555555&icon=sonarcloud.svg&icon_color=%23E7E7E7&title=hits&edge_flat=false")
 	}()
-	fmt.Println(Green("项目地址:"), Yellow("https://github.com/oneclickvirt/cpuTest"))
+	fmt.Println(Green("项目地址:"), Yellow("https://github.com/oneclickvirt/cputest"))
 	var showVersion bool
 	flag.BoolVar(&showVersion, "v", false, "show version")
 	languagePtr := flag.String("l", "", "Language parameter (en or zh)")
@@ -23,7 +23,7 @@ func main() {
 	testThreadsPtr := flag.String("t", "", "Specific Test Threads (single or multi)")
 	flag.Parse()
 	if showVersion {
-		fmt.Println(cputest.CpuTestVersion)
+		fmt.Println(cpu.CpuTestVersion)
 		return
 	}
 	var language, res, testMethod, testThread string
@@ -43,16 +43,16 @@ func main() {
 		testThread = strings.TrimSpace(strings.ToLower(*testThreadsPtr))
 	}
 	if runtime.GOOS == "windows" {
-		res = cputest.WinsatTest(language, testThread)
+		res = cpu.WinsatTest(language, testThread)
 	} else {
 		if testMethod == "sysbench" {
-			res = cputest.SysBenchTest(language, testThread)
+			res = cpu.SysBenchTest(language, testThread)
 			if res == "" {
 				res = "sysbench test failed, switch to use dd test.\n"
-				res += cputest.GeekBenchTest(language, testThread)
+				res += cpu.GeekBenchTest(language, testThread)
 			}
 		} else if testMethod == "geekbench" {
-			res = cputest.GeekBenchTest(language, testThread)
+			res = cpu.GeekBenchTest(language, testThread)
 		}
 	}
 	fmt.Printf(res)
