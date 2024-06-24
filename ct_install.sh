@@ -82,9 +82,4 @@ case $os in
 esac
 
 chmod 777 cputest
-if [ ! -f /usr/bin/cputest ]; then
-  mv cputest /usr/bin/
-  cputest
-else
-  ./cputest
-fi
+mv cputest /usr/bin/
