@@ -82,4 +82,4 @@ case $os in
 esac
 
 chmod 777 cputest
-mv cputest /usr/bin/
+cp cputest /usr/bin/
