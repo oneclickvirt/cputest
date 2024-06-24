@@ -1,8 +1,8 @@
 #!/bin/bash
-#From https://github.com/oneclickvirt/cpuTest
-#2024.05.23
+#From https://github.com/oneclickvirt/cputest
+#2024.06.24
 
-rm -rf /usr/bin/cpuTest
+rm -rf /usr/bin/cputest
 os=$(uname -s)
 arch=$(uname -m)
 
@@ -10,13 +10,13 @@ case $os in
   Linux)
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
-        wget -O cpuTest https://github.com/oneclickvirt/cpuTest/releases/download/output/cpuTest-linux-amd64
+        wget -O cputest https://github.com/oneclickvirt/cputest/releases/download/output/cputest-linux-amd64
         ;;
       "i386" | "i686")
-        wget -O cpuTest https://github.com/oneclickvirt/cpuTest/releases/download/output/cpuTest-linux-386
+        wget -O cputest https://github.com/oneclickvirt/cputest/releases/download/output/cputest-linux-386
         ;;
       "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
-        wget -O cpuTest https://github.com/oneclickvirt/cpuTest/releases/download/output/cpuTest-linux-arm64
+        wget -O cputest https://github.com/oneclickvirt/cputest/releases/download/output/cputest-linux-arm64
         ;;
       *)
         echo "Unsupported architecture: $arch"
@@ -27,13 +27,13 @@ case $os in
   Darwin)
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
-        wget -O cpuTest https://github.com/oneclickvirt/cpuTest/releases/download/output/cpuTest-darwin-amd64
+        wget -O cputest https://github.com/oneclickvirt/cputest/releases/download/output/cputest-darwin-amd64
         ;;
       "i386" | "i686")
-        wget -O cpuTest https://github.com/oneclickvirt/cpuTest/releases/download/output/cpuTest-darwin-386
+        wget -O cputest https://github.com/oneclickvirt/cputest/releases/download/output/cputest-darwin-386
         ;;
       "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
-        wget -O cpuTest https://github.com/oneclickvirt/cpuTest/releases/download/output/cpuTest-darwin-arm64
+        wget -O cputest https://github.com/oneclickvirt/cputest/releases/download/output/cputest-darwin-arm64
         ;;
       *)
         echo "Unsupported architecture: $arch"
@@ -44,13 +44,13 @@ case $os in
   FreeBSD)
     case $arch in
       amd64)
-        wget -O cpuTest https://github.com/oneclickvirt/cpuTest/releases/download/output/cpuTest-freebsd-amd64
+        wget -O cputest https://github.com/oneclickvirt/cputest/releases/download/output/cputest-freebsd-amd64
         ;;
       "i386" | "i686")
-        wget -O cpuTest https://github.com/oneclickvirt/cpuTest/releases/download/output/cpuTest-freebsd-386
+        wget -O cputest https://github.com/oneclickvirt/cputest/releases/download/output/cputest-freebsd-386
         ;;
       "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
-        wget -O cpuTest https://github.com/oneclickvirt/cpuTest/releases/download/output/cpuTest-freebsd-arm64
+        wget -O cputest https://github.com/oneclickvirt/cputest/releases/download/output/cputest-freebsd-arm64
         ;;
       *)
         echo "Unsupported architecture: $arch"
@@ -61,13 +61,13 @@ case $os in
   OpenBSD)
     case $arch in
       amd64)
-        wget -O cpuTest https://github.com/oneclickvirt/cpuTest/releases/download/output/cpuTest-openbsd-amd64
+        wget -O cputest https://github.com/oneclickvirt/cputest/releases/download/output/cputest-openbsd-amd64
         ;;
       "i386" | "i686")
-        wget -O cpuTest https://github.com/oneclickvirt/cpuTest/releases/download/output/cpuTest-openbsd-386
+        wget -O cputest https://github.com/oneclickvirt/cputest/releases/download/output/cputest-openbsd-386
         ;;
       "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
-        wget -O cpuTest https://github.com/oneclickvirt/cpuTest/releases/download/output/cpuTest-openbsd-arm64
+        wget -O cputest https://github.com/oneclickvirt/cputest/releases/download/output/cputest-openbsd-arm64
         ;;
       *)
         echo "Unsupported architecture: $arch"
@@ -81,10 +81,10 @@ case $os in
     ;;
 esac
 
-chmod 777 cpuTest
-if [ ! -f /usr/bin/cpuTest ]; then
-  mv cpuTest /usr/bin/
-  cpuTest
+chmod 777 cputest
+if [ ! -f /usr/bin/cputest ]; then
+  mv cputest /usr/bin/
+  cputest
 else
-  ./cpuTest
+  ./cputest
 fi
