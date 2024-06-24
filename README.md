@@ -4,8 +4,6 @@
 
 CPU测试模块 (CPU Test Module) 
 
-开发中，勿要使用
-
 # 功能(Features)
 
 - [x] 使用```sysbench```测试CPU得分
