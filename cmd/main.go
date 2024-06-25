@@ -43,20 +43,24 @@ func main() {
 		testThread = strings.TrimSpace(strings.ToLower(*testThreadsPtr))
 	}
 	if runtime.GOOS == "windows" {
-		res = cpu.WinsatTest(language, testThread)
+		res = "Detected host is Windows, using Winsat for testing.\n"
+		res += cpu.WinsatTest(language, testThread)
 	} else {
-		if testMethod == "sysbench" {
+		switch testMethod {
+		case "sysbench":
 			res = cpu.SysBenchTest(language, testThread)
 			if res == "" {
-				res = "sysbench test failed, switch to use geekbench test.\n"
+				res = "Sysbench test failed, switching to Geekbench for testing.\n"
 				res += cpu.GeekBenchTest(language, testThread)
 			}
-		} else if testMethod == "geekbench" {
+		case "geekbench":
 			res = cpu.GeekBenchTest(language, testThread)
 			if res == "" {
-				res = "geekbench test failed, switch to use sysbench test.\n"
-				res += cpu.GeekBenchTest(language, testThread)
+				res = "Geekbench test failed, switching to Sysbench for testing.\n"
+				res += cpu.SysBenchTest(language, testThread)
 			}
+		default:
+			res = "Invalid test method specified.\n"
 		}
 	}
 	fmt.Println("--------------------------------------------------")
