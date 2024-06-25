@@ -48,11 +48,15 @@ func main() {
 		if testMethod == "sysbench" {
 			res = cpu.SysBenchTest(language, testThread)
 			if res == "" {
-				res = "sysbench test failed, switch to use dd test.\n"
+				res = "sysbench test failed, switch to use geekbench test.\n"
 				res += cpu.GeekBenchTest(language, testThread)
 			}
 		} else if testMethod == "geekbench" {
 			res = cpu.GeekBenchTest(language, testThread)
+			if res == "" {
+				res = "geekbench test failed, switch to use sysbench test.\n"
+				res += cpu.GeekBenchTest(language, testThread)
+			}
 		}
 	}
 	fmt.Println("--------------------------------------------------")
