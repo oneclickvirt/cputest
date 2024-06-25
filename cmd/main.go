@@ -43,7 +43,9 @@ func main() {
 		testThread = strings.TrimSpace(strings.ToLower(*testThreadsPtr))
 	}
 	if runtime.GOOS == "windows" {
-		res = "Detected host is Windows, using Winsat for testing.\n"
+		if testMethod != "winsat" && testMethod != "" {
+			res = "Detected host is Windows, using Winsat for testing.\n"
+		}
 		res += cpu.WinsatTest(language, testThread)
 	} else {
 		switch testMethod {
