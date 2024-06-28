@@ -102,6 +102,13 @@ Usage of cputest:
   -v    show version
 ```
 
+## 卸载
+
+```
+rm -rf /root/cputest
+rm -rf /usr/bin/cputest
+```
+
 ## 在Golang中使用
 
 ```
