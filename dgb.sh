@@ -2,7 +2,7 @@
 #From https://github.com/oneclickvirt/cputest
 #2024.06.29
 
-rm -rf /usr/bin/geekbench
+rm -rf /usr/bin/geekbench*
 arch=$(uname -m)
 release_date="20240525"
 mypwd=$(pwd)
