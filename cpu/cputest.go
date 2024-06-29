@@ -100,17 +100,17 @@ func SysBenchTest(language, testThread string) string {
 // runGeekbenchCommand 执行 geekbench 命令进行测试
 func runGeekbenchCommand() (string, error) {
 	var command *exec.Cmd
-	command = exec.Command("/tmp/geekbench/geekbench", "--upload")
+	command = exec.Command("geekbench", "--upload")
 	output, err := command.CombinedOutput()
 	return string(output), err
 }
 
 // GeekBenchTest 调用 geekbench 执行CPU测试
-// 调用 /tmp 下的 /tmp/geekbench 中的 geekbench 文件执行
+// 调用 geekbench 命令执行
 // https://github.com/masonr/yet-another-bench-script/blob/0ad4c4e85694dbcf0958d8045c2399dbd0f9298c/yabs.sh#L894
 func GeekBenchTest(language, testThread string) string {
 	var result, singleScore, multiScore, link string
-	comCheck := exec.Command("/tmp/geekbench/geekbench", "--version")
+	comCheck := exec.Command("geekbench", "--version")
 	// Geekbench 5.4.5 Tryout Build 503938 (corktown-master-build 6006e737ba)
 	output, err := comCheck.CombinedOutput()
 	version := string(output)

@@ -1,3 +1,3 @@
 package cpu
 
-const CpuTestVersion = "v0.0.3"
+const CpuTestVersion = "v0.0.4"

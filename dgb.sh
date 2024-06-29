@@ -1,14 +1,13 @@
 #!/bin/bash
 #From https://github.com/oneclickvirt/cputest
-#2024.05.25
+#2024.06.29
 
-
-rm -rf /tmp/geekbench
+rm -rf /usr/bin/geekbench
 arch=$(uname -m)
 release_date="20240525"
 mypwd=$(pwd)
-if [ ! -d "/tmp" ]; then
-    mkdir /tmp
+if [ ! -d "/usr/bin/" ]; then
+    mkdir /usr/bin/
 fi
 if ! command -v wget >/dev/null 2>&1; then
     echo "The wget command is not detected, please download it before executing this script."
@@ -42,11 +41,11 @@ case $gbv in
   gb4)
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
-        wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-4.4.4-Linux.tar.gz
-        cd /tmp >/dev/null 2>&1
+        wget -O /usr/bin/geekbench.tar.gz https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-4.4.4-Linux.tar.gz
+        cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
-        mv Geekbench-4.4.4-Linux /tmp/geekbench
+        mv Geekbench-4.4.4-Linux geekbench
         cd $mypwd >/dev/null 2>&1
         ;;
       *)
@@ -58,19 +57,19 @@ case $gbv in
   gb5)
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
-        wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-5.5.1-Linux.tar.gz
-        cd /tmp >/dev/null 2>&1
+        wget -O /usr/bin/geekbench.tar.gz https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-5.5.1-Linux.tar.gz
+        cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
-        mv Geekbench-5.5.1-Linux /tmp/geekbench
+        mv Geekbench-5.5.1-Linux geekbench
         cd $mypwd >/dev/null 2>&1
         ;;
       "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
-        wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-5.5.1-LinuxARMPreview.tar.gz
-        cd /tmp >/dev/null 2>&1
+        wget -O /usr/bin/geekbench.tar.gz https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-5.5.1-LinuxARMPreview.tar.gz
+        cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
-        mv Geekbench-5.5.1-LinuxARMPreview /tmp/geekbench
+        mv Geekbench-5.5.1-LinuxARMPreview geekbench
         cd $mypwd >/dev/null 2>&1
         ;;
       *)
@@ -82,19 +81,19 @@ case $gbv in
   gb6)
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
-        wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-6.3.0-Linux.tar.gz
-        cd /tmp >/dev/null 2>&1
+        wget -O /usr/bin/geekbench.tar.gz https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-6.3.0-Linux.tar.gz
+        cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
-        mv Geekbench-6.3.0-Linux /tmp/geekbench
+        mv Geekbench-6.3.0-Linux geekbench
         cd $mypwd >/dev/null 2>&1
         ;;
       "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
-        wget -O /tmp/geekbench.tar.gz https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-6.3.0-LinuxARMPreview.tar.gz
-        cd /tmp >/dev/null 2>&1
+        wget -O /usr/bin/geekbench.tar.gz https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-6.3.0-LinuxARMPreview.tar.gz
+        cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
-        mv Geekbench-6.3.0-LinuxARMPreview /tmp/geekbench
+        mv Geekbench-6.3.0-LinuxARMPreview geekbench
         cd $mypwd >/dev/null 2>&1
         ;;
       *)
@@ -105,22 +104,13 @@ case $gbv in
     ;;
 esac
 
-if [ -d /tmp/geekbench ]; then
-  for file in /tmp/geekbench/geekbench[0-9]*; do
-    if [ -f "$file" ]; then
-      chmod 777 "$file"
-      target="/tmp/geekbench/geekbench"
-      mv "$file" "$target"
-    fi
-  done
-fi
-if [ -f /tmp/geekbench/geekbench ]; then 
-  chmod 777 /tmp/geekbench/geekbench
-  /tmp/geekbench/geekbench --version
+if [ -f /usr/bin/geekbench ]; then 
+  chmod 777 /usr/bin/geekbench
+  /usr/bin/geekbench --version
   if [ $? -ne 0 ]; then
     echo "Geekbench failed to check the version, please leave an error message in the repository's issues."
   fi
-  rm -rf /tmp/geekbench.tar.gz
+  rm -rf /usr/bin/geekbench.tar.gz
 else
   echo "Geekbench failed to download, please leave an error message in the repository's issues."
 fi
