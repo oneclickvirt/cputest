@@ -45,7 +45,8 @@ case $gbv in
         cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
-        mv Geekbench-4.4.4-Linux geekbench
+        mv Geekbench-4.4.4-Linux/geekbench4 geekbench
+        rm -rf Geekbench-4.4.4-Linux
         cd $mypwd >/dev/null 2>&1
         ;;
       *)
@@ -61,7 +62,8 @@ case $gbv in
         cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
-        mv Geekbench-5.5.1-Linux geekbench
+        mv Geekbench-5.5.1-Linux/geekbench5 geekbench
+        rm -rf Geekbench-5.5.1-Linux
         cd $mypwd >/dev/null 2>&1
         ;;
       "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
@@ -69,7 +71,8 @@ case $gbv in
         cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
-        mv Geekbench-5.5.1-LinuxARMPreview geekbench
+        mv Geekbench-5.5.1-LinuxARMPreview/geekbench5 geekbench
+        rm -rf Geekbench-5.5.1-LinuxARMPreview
         cd $mypwd >/dev/null 2>&1
         ;;
       *)
@@ -85,7 +88,8 @@ case $gbv in
         cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
-        mv Geekbench-6.3.0-Linux geekbench
+        mv Geekbench-6.3.0-Linux/geekbench6 geekbench
+        rm -rf Geekbench-6.3.0-Linux
         cd $mypwd >/dev/null 2>&1
         ;;
       "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
@@ -93,7 +97,8 @@ case $gbv in
         cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
-        mv Geekbench-6.3.0-LinuxARMPreview geekbench
+        mv Geekbench-6.3.0-LinuxARMPreview/geekbench6 geekbench
+        rm -rf Geekbench-6.3.0-LinuxARMPreview
         cd $mypwd >/dev/null 2>&1
         ;;
       *)
