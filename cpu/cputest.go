@@ -3,6 +3,7 @@ package cpu
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -12,7 +13,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/parnurzeal/gorequest"
+	"github.com/imroc/req/v3"
 )
 
 // runSysBenchCommand 执行 sysbench 命令进行测试
@@ -203,16 +204,22 @@ func GeekBenchTest(language, testThread string) string {
 			accept    = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
 			referer   = "browser.geekbench.com"
 		)
-		request := gorequest.New().Get(link).
-			Retry(3, 6*time.Second, http.StatusBadRequest, http.StatusInternalServerError)
-		request.Set("User-Agent", userAgent)
-		request.Set("Accept", accept)
-		request.Set("Referer", referer)
-		response, body, err := request.End()
+		client := req.DefaultClient()
+		client.SetTimeout(6 * time.Second)
+		client.SetCommonHeader("User-Agent", userAgent)
+		client.SetCommonHeader("Accept", accept)
+		client.SetCommonHeader("Referer", referer)
+		resp, err := client.R().Get(link)
 		if err != nil {
 			return ""
 		}
-		if response.StatusCode != http.StatusOK {
+		defer resp.Body.Close()
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return ""
+		}
+		body := string(b)
+		if resp.StatusCode != http.StatusOK {
 			return ""
 		}
 		doc, readErr := goquery.NewDocumentFromReader(strings.NewReader(body))
