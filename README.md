@@ -71,10 +71,16 @@ bash dgb.sh -v gb6
 
 # 使用(Usage)
 
-下载及安装
+下载、安装、升级
 
 ```
-curl https://raw.githubusercontent.com/oneclickvirt/cputest/main/ct_install.sh -sSf | sh
+curl https://raw.githubusercontent.com/oneclickvirt/cputest/main/ct_install.sh -sSf | bash
+```
+
+或
+
+```
+curl https://cdn.spiritlhl.net/https://raw.githubusercontent.com/oneclickvirt/cputest/main/ct_install.sh -sSf | bash
 ```
 
 使用
