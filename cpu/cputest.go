@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,7 +32,8 @@ func runSysBenchCommand(numThreads, maxTime, version string) (string, error) {
 }
 
 func SysBenchTest(language, testThread string) string {
-	var result, singleScore, multiScore string
+	var result, singleScore, multiScore, totalTime, totalEvents string
+	var temp []string
 	comCheck := exec.Command("sysbench", "--version")
 	output, err := comCheck.CombinedOutput()
 	if err == nil {
@@ -41,10 +43,32 @@ func SysBenchTest(language, testThread string) string {
 			if err == nil {
 				tempList := strings.Split(singleResult, "\n")
 				for _, line := range tempList {
-					if strings.Contains(line, "events per second:") || strings.Contains(line, "total number of events:") {
-						temp1 := strings.Split(line, ":")
-						if len(temp1) == 2 {
-							singleScore = temp1[1]
+					if strings.Contains(line, "events per second:") {
+						temp = strings.Split(line, ":")
+						if len(temp) == 2 {
+							singleScore = temp[1]
+							break
+						}
+					} else if singleScore == "" && totalTime == "" && strings.Contains(line, "total time:") {
+						temp = strings.Split(line, ":")
+						if len(temp) == 2 {
+							totalTime = strings.ReplaceAll(temp[1], "s", "")
+						}
+					} else if singleScore == "" && totalEvents == "" && strings.Contains(line, "total number of events:") {
+						temp = strings.Split(line, ":")
+						if len(temp) == 2 {
+							totalEvents = temp[1]
+						}
+					}
+				}
+				if singleScore == "" && totalTime != "" && totalEvents != "" {
+					totalEventsFloat, err1 := strconv.ParseFloat(totalEvents, 64)
+					if err1 == nil {
+						totalTimeFloat, err2 := strconv.ParseFloat(totalTime, 64)
+						if err2 == nil {
+							singleScoreFloat := totalEventsFloat / totalTimeFloat
+							singleScore = strconv.FormatFloat(singleScoreFloat, 'f', 2, 64)
+							totalTime, totalEvents = "", ""
 						}
 					}
 				}
@@ -60,10 +84,10 @@ func SysBenchTest(language, testThread string) string {
 			if err == nil {
 				tempList := strings.Split(singleResult, "\n")
 				for _, line := range tempList {
-					if strings.Contains(line, "events per second:") || strings.Contains(line, "total number of events:") {
-						temp1 := strings.Split(line, ":")
-						if len(temp1) == 2 {
-							singleScore = temp1[1]
+					if strings.Contains(line, "events per second:") {
+						temp = strings.Split(line, ":")
+						if len(temp) == 2 {
+							singleScore = temp[1]
 						}
 					}
 				}
@@ -78,10 +102,31 @@ func SysBenchTest(language, testThread string) string {
 			if err == nil {
 				tempList := strings.Split(multiResult, "\n")
 				for _, line := range tempList {
-					if strings.Contains(line, "events per second:") || strings.Contains(line, "total number of events:") {
+					if strings.Contains(line, "events per second:") {
 						temp1 := strings.Split(line, ":")
 						if len(temp1) == 2 {
 							multiScore = temp1[1]
+						}
+					} else if multiScore == "" && totalTime == "" && strings.Contains(line, "total time:") {
+						temp = strings.Split(line, ":")
+						if len(temp) == 2 {
+							totalTime = strings.ReplaceAll(temp[1], "s", "")
+						}
+					} else if multiScore == "" && totalEvents == "" && strings.Contains(line, "total number of events:") {
+						temp = strings.Split(line, ":")
+						if len(temp) == 2 {
+							totalEvents = temp[1]
+						}
+					}
+				}
+				if multiScore == "" && totalTime != "" && totalEvents != "" {
+					totalEventsFloat, err1 := strconv.ParseFloat(totalEvents, 64)
+					if err1 == nil {
+						totalTimeFloat, err2 := strconv.ParseFloat(totalTime, 64)
+						if err2 == nil {
+							multiScoreFloat := totalEventsFloat / totalTimeFloat
+							multiScore = strconv.FormatFloat(multiScoreFloat, 'f', 2, 64)
+							totalTime, totalEvents = "", ""
 						}
 					}
 				}
