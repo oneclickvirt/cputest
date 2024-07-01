@@ -1,6 +1,6 @@
 #!/bin/bash
 #From https://github.com/oneclickvirt/cputest
-#2024.06.29
+#2024.07.01
 
 rm -rf /usr/bin/geekbench*
 arch=$(uname -m)
@@ -76,7 +76,8 @@ case $gbv in
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
         mv Geekbench-5.5.1-LinuxARMPreview/geekbench5 geekbench
-        mv Geekbench-5.5.1-LinuxARMPreview/geekbench_arm64 geekbench_arm64
+        mv Geekbench-5.5.1-LinuxARMPreview/geekbench_aarch64 geekbench_aarch64
+        mv Geekbench-5.5.1-LinuxARMPreview/geekbench_armv7 geekbench_armv7
         mv Geekbench-5.5.1-LinuxARMPreview/geekbench.plar geekbench.plar
         rm -rf Geekbench-5.5.1-LinuxARMPreview
         cd $mypwd >/dev/null 2>&1
@@ -106,7 +107,8 @@ case $gbv in
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
         mv Geekbench-6.3.0-LinuxARMPreview/geekbench6 geekbench
-        mv Geekbench-6.3.0-LinuxARMPreview/geekbench_arm64 geekbench_arm64
+        mv Geekbench-6.3.0-LinuxARMPreview/geekbench_aarch64 geekbench_aarch64
+        mv Geekbench-6.3.0-LinuxARMPreview/geekbench_armv7 geekbench_armv7
         mv Geekbench-6.3.0-LinuxARMPreview/geekbench.plar geekbench.plar
         rm -rf Geekbench-6.3.0-LinuxARMPreview
         cd $mypwd >/dev/null 2>&1
