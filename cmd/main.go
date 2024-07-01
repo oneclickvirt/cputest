@@ -4,10 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"os"
 	"runtime"
 	"strings"
 
 	"github.com/oneclickvirt/cputest/cpu"
+	"github.com/oneclickvirt/cputest/model"
 	. "github.com/oneclickvirt/defaultset"
 )
 
@@ -16,50 +18,55 @@ func main() {
 		http.Get("https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Foneclickvirt%2Fcputest&count_bg=%2323E01C&title_bg=%23555555&icon=sonarcloud.svg&icon_color=%23E7E7E7&title=hits&edge_flat=false")
 	}()
 	fmt.Println(Green("项目地址:"), Yellow("https://github.com/oneclickvirt/cputest"))
-	var showVersion bool
-	flag.BoolVar(&showVersion, "v", false, "show version")
-	languagePtr := flag.String("l", "", "Language parameter (en or zh)")
-	testMethodPtr := flag.String("m", "", "Specific Test Method (sysbench or geekbench)")
-	testThreadsPtr := flag.String("t", "", "Specific Test Threads (single or multi)")
-	flag.Parse()
-	if showVersion {
-		fmt.Println(cpu.CpuTestVersion)
+	var showVersion, help bool
+	var language, testMethod, testThreadMode string
+	cputestFlag := flag.NewFlagSet("cputest", flag.ContinueOnError)
+	cputestFlag.BoolVar(&help, "h", false, "Show help information")
+	cputestFlag.BoolVar(&showVersion, "v", false, "show version")
+	cputestFlag.StringVar(&language, "l", "", "Language parameter (en or zh)")
+	cputestFlag.StringVar(&testMethod, "m", "", "Specific Test Method (sysbench or geekbench)")
+	cputestFlag.StringVar(&testThreadMode, "t", "", "Specific Test Thread Mode (single or multi)")
+	cputestFlag.BoolVar(&model.EnableLoger, "log", false, "Enable logging")
+	cputestFlag.Parse(os.Args[1:])
+	if help {
+		fmt.Printf("Usage: %s [options]\n", os.Args[0])
+		cputestFlag.PrintDefaults()
 		return
 	}
-	var language, res, testMethod, testThread string
-	if *languagePtr == "" {
-		language = "zh"
-	} else {
-		language = strings.ToLower(*languagePtr)
+	if showVersion {
+		fmt.Println(model.CpuTestVersion)
+		return
 	}
-	if *testMethodPtr == "" || *testMethodPtr == "sysbench" {
+	var res string
+	language = strings.ToLower(language)
+	if testMethod == "" || strings.ToLower(testMethod) == "sysbench" {
 		testMethod = "sysbench"
-	} else if *testMethodPtr == "geekbench" {
+	} else if strings.ToLower(testMethod) == "geekbench" {
 		testMethod = "geekbench"
 	}
-	if *testThreadsPtr == "" || *testThreadsPtr == "single" {
-		testThread = "single"
+	if testThreadMode == "" || strings.ToLower(testThreadMode) == "single" {
+		testThreadMode = "single"
 	} else {
-		testThread = strings.TrimSpace(strings.ToLower(*testThreadsPtr))
+		testThreadMode = strings.TrimSpace(strings.ToLower(testThreadMode))
 	}
 	if runtime.GOOS == "windows" {
 		if testMethod != "winsat" && testMethod != "" {
 			res = "Detected host is Windows, using Winsat for testing.\n"
 		}
-		res += cpu.WinsatTest(language, testThread)
+		res += cpu.WinsatTest(language, testThreadMode)
 	} else {
 		switch testMethod {
 		case "sysbench":
-			res = cpu.SysBenchTest(language, testThread)
+			res = cpu.SysBenchTest(language, testThreadMode)
 			if res == "" {
 				res = "Sysbench test failed, switching to Geekbench for testing.\n"
-				res += cpu.GeekBenchTest(language, testThread)
+				res += cpu.GeekBenchTest(language, testThreadMode)
 			}
 		case "geekbench":
-			res = cpu.GeekBenchTest(language, testThread)
+			res = cpu.GeekBenchTest(language, testThreadMode)
 			if res == "" {
 				res = "Geekbench test failed, switching to Sysbench for testing.\n"
-				res += cpu.SysBenchTest(language, testThread)
+				res += cpu.SysBenchTest(language, testThreadMode)
 			}
 		default:
 			res = "Invalid test method specified.\n"
