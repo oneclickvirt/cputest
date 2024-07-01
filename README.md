@@ -98,13 +98,16 @@ cputest
 进行测试
 
 ```
-Usage of cputest:
+Usage: cputest [options]
+  -h    Show help information
   -l string
         Language parameter (en or zh)
+  -log
+        Enable logging
   -m string
         Specific Test Method (sysbench or geekbench)
   -t string
-        Specific Test Threads (single or multi)
+        Specific Test Thread Mode (single or multi)
   -v    show version
 ```
 
