@@ -99,45 +99,47 @@ func SysBenchTest(language, testThread string) string {
 				result += "1 线程测试(单核)得分: "
 			}
 			result += singleScore + "\n"
-			multiResult, err := runSysBenchCommand(fmt.Sprintf("%d", runtime.NumCPU()), "5", version)
-			if err == nil {
-				tempList := strings.Split(multiResult, "\n")
-				for _, line := range tempList {
-					if strings.Contains(line, "events per second:") {
-						temp1 := strings.Split(line, ":")
-						if len(temp1) == 2 {
-							multiScore = temp1[1]
+			if runtime.NumCPU() > 1 {
+				multiResult, err := runSysBenchCommand(fmt.Sprintf("%d", runtime.NumCPU()), "5", version)
+				if err == nil {
+					tempList := strings.Split(multiResult, "\n")
+					for _, line := range tempList {
+						if strings.Contains(line, "events per second:") {
+							temp1 := strings.Split(line, ":")
+							if len(temp1) == 2 {
+								multiScore = temp1[1]
+							}
+						} else if multiScore == "" && totalTime == "" && strings.Contains(line, "total time:") {
+							temp = strings.Split(line, ":")
+							if len(temp) == 2 {
+								totalTime = strings.ReplaceAll(temp[1], "s", "")
+							}
+						} else if multiScore == "" && totalEvents == "" && strings.Contains(line, "total number of events:") {
+							temp = strings.Split(line, ":")
+							if len(temp) == 2 {
+								totalEvents = temp[1]
+							}
 						}
-					} else if multiScore == "" && totalTime == "" && strings.Contains(line, "total time:") {
-						temp = strings.Split(line, ":")
-						if len(temp) == 2 {
-							totalTime = strings.ReplaceAll(temp[1], "s", "")
-						}
-					} else if multiScore == "" && totalEvents == "" && strings.Contains(line, "total number of events:") {
-						temp = strings.Split(line, ":")
-						if len(temp) == 2 {
-							totalEvents = temp[1]
+					}
+					if multiScore == "" && totalTime != "" && totalEvents != "" {
+						totalEventsFloat, err1 := strconv.ParseFloat(totalEvents, 64)
+						if err1 == nil {
+							totalTimeFloat, err2 := strconv.ParseFloat(totalTime, 64)
+							if err2 == nil {
+								multiScoreFloat := totalEventsFloat / totalTimeFloat
+								multiScore = strconv.FormatFloat(multiScoreFloat, 'f', 2, 64)
+								totalTime, totalEvents = "", ""
+							}
 						}
 					}
 				}
-				if multiScore == "" && totalTime != "" && totalEvents != "" {
-					totalEventsFloat, err1 := strconv.ParseFloat(totalEvents, 64)
-					if err1 == nil {
-						totalTimeFloat, err2 := strconv.ParseFloat(totalTime, 64)
-						if err2 == nil {
-							multiScoreFloat := totalEventsFloat / totalTimeFloat
-							multiScore = strconv.FormatFloat(multiScoreFloat, 'f', 2, 64)
-							totalTime, totalEvents = "", ""
-						}
-					}
+				if language == "en" {
+					result += fmt.Sprintf("%d", runtime.NumCPU()) + " Thread(s) Test: "
+				} else {
+					result += fmt.Sprintf("%d", runtime.NumCPU()) + " 线程测试(多核)得分: "
 				}
+				result += multiScore + "\n"
 			}
-			if language == "en" {
-				result += fmt.Sprintf("%d", runtime.NumCPU()) + " Thread(s) Test: "
-			} else {
-				result += fmt.Sprintf("%d", runtime.NumCPU()) + " 线程测试(多核)得分: "
-			}
-			result += multiScore + "\n"
 		}
 	}
 	return result
