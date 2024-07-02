@@ -128,6 +128,7 @@ func SysBenchTest(language, testThread string) string {
 		}
 		result += singleScore + "\n"
 		if runtime.NumCPU() > 1 {
+			time.Sleep(1 * time.Second)
 			multiResult, err := runSysBenchCommand(fmt.Sprintf("%d", runtime.NumCPU()), "5", version)
 			if err != nil {
 				if model.EnableLoger {
