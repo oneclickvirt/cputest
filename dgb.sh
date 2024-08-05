@@ -1,6 +1,6 @@
 #!/bin/bash
 #From https://github.com/oneclickvirt/cputest
-#2024.07.02
+#2024.08.05
 
 rm -rf /usr/bin/geekbench*
 arch=$(uname -m)
@@ -34,7 +34,26 @@ case "$2" in
 esac
 
 # 检测本机是否存在IPV4网络，不存在时无法使用 geekbench 进行测试
+check_ipv4_available() {
+    if ! curl -s 'https://browser.geekbench.com' --connect-timeout 5 >/dev/null; then
+        echo -e "No IPV4 network, can't test with geekbench, browser.geekbench.com only has IPv4, does not support IPv6, forcing to test with no result."
+        exit 1
+    fi
+}
+check_ipv4_available
+
 # 除了 geekbench 4 , 更高版本的 geekbench需要本机至少有 1 GB 内存
+mem=$(free -m | awk '/Mem/{print $2}')
+swap=$(free -m | awk '/Swap/{print $2}')
+ms=$((mem + old_swap))
+if [ "$mem" -ge "1024" ]; then
+    echo "After judgment, the memory of this machine is greater than 1G, which meets the GB5/GB6 test conditions"
+elif [ "$old_ms" -ge "1280" ]; then
+    echo "After judgment, the total amount of RAM plus Swap of this machine is more than 1.25G, which meets the GB5/GB6 test conditions."
+else
+    echo "After judgment, the total memory plus Swap of this machine is less than 1.25G, switch to GB4 for testing."
+    gbv="gb4"
+fi
 
 check_cdn() {
   local o_url=$1
@@ -60,12 +79,26 @@ check_cdn_file() {
 cdn_urls=("https://cdn0.spiritlhl.top/" "http://cdn3.spiritlhl.net/" "http://cdn1.spiritlhl.net/" "http://cdn2.spiritlhl.net/")
 check_cdn_file
 
+download_file() {
+    local url="$1"
+    local output="$2"
+    
+    if ! wget -O "$output" "$url"; then
+        echo "wget failed, trying curl..."
+        if ! curl -L -o "$output" "$url"; then
+            echo "Both wget and curl failed. Unable to download the file."
+            return 1
+        fi
+    fi
+    return 0
+}
+
 # 下载对应文件
 case $gbv in
   gb4)
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
-        wget -O /usr/bin/geekbench.tar.gz "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-4.4.4-Linux.tar.gz"
+        download_file "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-4.4.4-Linux.tar.gz" "/usr/bin/geekbench.tar.gz"
         cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
@@ -84,7 +117,7 @@ case $gbv in
   gb5)
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
-        wget -O /usr/bin/geekbench.tar.gz "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-5.5.1-Linux.tar.gz"
+        download_file "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-5.5.1-Linux.tar.gz" "/usr/bin/geekbench.tar.gz"
         cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
@@ -95,7 +128,7 @@ case $gbv in
         cd $mypwd >/dev/null 2>&1
         ;;
       "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
-        wget -O /usr/bin/geekbench.tar.gz "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-5.5.1-LinuxARMPreview.tar.gz"
+        download_file "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-5.5.1-LinuxARMPreview.tar.gz" "/usr/bin/geekbench.tar.gz"
         cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
@@ -115,7 +148,7 @@ case $gbv in
   gb6)
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
-        wget -O /usr/bin/geekbench.tar.gz "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-6.3.0-Linux.tar.gz"
+        download_file "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-6.3.0-Linux.tar.gz" "/usr/bin/geekbench.tar.gz"
         cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
@@ -126,7 +159,7 @@ case $gbv in
         cd $mypwd >/dev/null 2>&1
         ;;
       "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
-        wget -O /usr/bin/geekbench.tar.gz "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-6.3.0-LinuxARMPreview.tar.gz"
+        download_file "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-6.3.0-LinuxARMPreview.tar.gz" "/usr/bin/geekbench.tar.gz"
         cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
