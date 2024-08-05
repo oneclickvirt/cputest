@@ -1,6 +1,6 @@
 #!/bin/bash
 #From https://github.com/oneclickvirt/cputest
-#2024.06.30
+#2024.08.05
 
 rm -rf /usr/bin/cputest
 rm -rf cputest
@@ -31,80 +31,69 @@ check_cdn_file() {
 cdn_urls=("https://cdn0.spiritlhl.top/" "http://cdn3.spiritlhl.net/" "http://cdn1.spiritlhl.net/" "http://cdn2.spiritlhl.net/")
 check_cdn_file
 
-case $os in
-  Linux)
-    case $arch in
-      "x86_64" | "x86" | "amd64" | "x64")
-        wget -O cputest "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/output/cputest-linux-amd64"
-        ;;
-      "i386" | "i686")
-        wget -O cputest "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/output/cputest-linux-386"
-        ;;
-      "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
-        wget -O cputest "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/output/cputest-linux-arm64"
-        ;;
-      *)
-        echo "Unsupported architecture: $arch"
-        exit 1
-        ;;
-    esac
-    ;;
-  Darwin)
-    case $arch in
-      "x86_64" | "x86" | "amd64" | "x64")
-        wget -O cputest "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/output/cputest-darwin-amd64"
-        ;;
-      "i386" | "i686")
-        wget -O cputest "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/output/cputest-darwin-386"
-        ;;
-      "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
-        wget -O cputest "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/output/cputest-darwin-arm64"
-        ;;
-      *)
-        echo "Unsupported architecture: $arch"
-        exit 1
-        ;;
-    esac
-    ;;
-  FreeBSD)
-    case $arch in
-      amd64)
-        wget -O cputest "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/output/cputest-freebsd-amd64"
-        ;;
-      "i386" | "i686")
-        wget -O cputest "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/output/cputest-freebsd-386"
-        ;;
-      "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
-        wget -O cputest "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/output/cputest-freebsd-arm64"
-        ;;
-      *)
-        echo "Unsupported architecture: $arch"
-        exit 1
-        ;;
-    esac
-    ;;
-  OpenBSD)
-    case $arch in
-      amd64)
-        wget -O cputest "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/output/cputest-openbsd-amd64"
-        ;;
-      "i386" | "i686")
-        wget -O cputest "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/output/cputest-openbsd-386"
-        ;;
-      "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
-        wget -O cputest "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/output/cputest-openbsd-arm64"
-        ;;
-      *)
-        echo "Unsupported architecture: $arch"
-        exit 1
-        ;;
-    esac
-    ;;
-  *)
-    echo "Unsupported operating system: $os"
-    exit 1
-    ;;
-esac
+download_file() {
+    local url="$1"
+    local output="$2"
+    
+    if ! wget -O "$output" "$url"; then
+        echo "wget failed, trying curl..."
+        if ! curl -L -o "$output" "$url"; then
+            echo "Both wget and curl failed. Unable to download the file."
+            return 1
+        fi
+    fi
+    return 0
+}
 
+get_cputest_url() {
+    local os="$1"
+    local arch="$2"
+    case $os in
+        Linux)
+            case $arch in
+                "x86_64" | "x86" | "amd64" | "x64") echo "cputest-linux-amd64" ;;
+                "i386" | "i686") echo "cputest-linux-386" ;;
+                "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64") echo "cputest-linux-arm64" ;;
+                *) return 1 ;;
+            esac
+            ;;
+        Darwin)
+            case $arch in
+                "x86_64" | "x86" | "amd64" | "x64") echo "cputest-darwin-amd64" ;;
+                "i386" | "i686") echo "cputest-darwin-386" ;;
+                "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64") echo "cputest-darwin-arm64" ;;
+                *) return 1 ;;
+            esac
+            ;;
+        FreeBSD)
+            case $arch in
+                amd64) echo "cputest-freebsd-amd64" ;;
+                "i386" | "i686") echo "cputest-freebsd-386" ;;
+                "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64") echo "cputest-freebsd-arm64" ;;
+                *) return 1 ;;
+            esac
+            ;;
+        OpenBSD)
+            case $arch in
+                amd64) echo "cputest-openbsd-amd64" ;;
+                "i386" | "i686") echo "cputest-openbsd-386" ;;
+                "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64") echo "cputest-openbsd-arm64" ;;
+                *) return 1 ;;
+            esac
+            ;;
+        *) return 1 ;;
+    esac
+}
+
+cputest_filename=$(get_cputest_url "$os" "$arch")
+if [ -z "$cputest_filename" ]; then
+    echo "Unsupported operating system ($os) or architecture ($arch)"
+    exit 1
+fi
+cputest_url="${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/output/${cputest_filename}"
+if ! download_file "$cputest_url" "cputest"; then
+    echo "Failed to download cputest"
+    exit 1
+fi
 chmod 777 cputest
 cp cputest /usr/bin/cputest
