@@ -43,17 +43,29 @@ check_ipv4_available() {
 check_ipv4_available
 
 # 除了 geekbench 4 , 更高版本的 geekbench需要本机至少有 1 GB 内存
-mem=$(free -m | awk '/Mem/{print $2}')
-swap=$(free -m | awk '/Swap/{print $2}')
-ms=$((mem + old_swap))
-if [ "$mem" -ge "1024" ]; then
-    echo "After judgment, the memory of this machine is greater than 1G, which meets the GB5/GB6 test conditions"
-elif [ "$old_ms" -ge "1280" ]; then
-    echo "After judgment, the total amount of RAM plus Swap of this machine is more than 1.25G, which meets the GB5/GB6 test conditions."
-else
-    echo "After judgment, the total memory plus Swap of this machine is less than 1.25G, switch to GB4 for testing."
-    gbv="gb4"
-fi
+check_memory() {
+    if command -v free >/dev/null 2>&1; then
+        mem=$(free -m | awk '/Mem/{print $2}')
+        swap=$(free -m | awk '/Swap/{print $2}')
+    elif [ -f "/proc/meminfo" ]; then
+        mem=$(awk '/MemTotal/{print $2/1024}' /proc/meminfo | cut -d. -f1)
+        swap=$(awk '/SwapTotal/{print $2/1024}' /proc/meminfo | cut -d. -f1)
+    else
+        echo "Unable to determine system memory. Defaulting to GB4 for testing."
+        gbv="gb4"
+        return 1
+    fi
+    ms=$((mem + swap))
+    if [ "$mem" -ge "1024" ]; then
+        echo "After judgment, the memory of this machine is greater than 1G, which meets the GB5/GB6 test conditions"
+    elif [ "$ms" -ge "1280" ]; then
+        echo "After judgment, the total amount of RAM plus Swap of this machine is more than 1.25G, which meets the GB5/GB6 test conditions."
+    else
+        echo "After judgment, the total memory plus Swap of this machine is less than 1.25G, switch to GB4 for testing."
+        gbv="gb4"
+    fi
+}
+check_memory
 
 check_cdn() {
   local o_url=$1
