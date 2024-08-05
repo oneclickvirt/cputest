@@ -109,7 +109,7 @@ download_file() {
 case $gbv in
   gb4)
     case $arch in
-      "x86_64" | "x86" | "amd64" | "x64")
+      "x86_64" | "x86" | "amd64" | "x64" | "i686")
         download_file "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-4.4.4-Linux.tar.gz" "/usr/bin/geekbench.tar.gz"
         cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
@@ -128,7 +128,7 @@ case $gbv in
     ;;
   gb5)
     case $arch in
-      "x86_64" | "x86" | "amd64" | "x64")
+      "x86_64" | "x86" | "amd64" | "x64" | "i686")
         download_file "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-5.5.1-Linux.tar.gz" "/usr/bin/geekbench.tar.gz"
         cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
@@ -159,7 +159,7 @@ case $gbv in
     ;;
   gb6)
     case $arch in
-      "x86_64" | "x86" | "amd64" | "x64")
+      "x86_64" | "x86" | "amd64" | "x64" | "i686")
         download_file "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-6.3.0-Linux.tar.gz" "/usr/bin/geekbench.tar.gz"
         cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
