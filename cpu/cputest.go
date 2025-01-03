@@ -43,9 +43,42 @@ func SysBenchTest(language, testThread string) string {
 	var temp []string
 	comCheck := exec.Command("sysbench", "--version")
 	output, err := comCheck.CombinedOutput()
+	// 如果系统没有安装sysbench，使用自实现的测试
 	if err != nil {
-		if model.EnableLoger {
-			Logger.Info("cannot match sysbench command: " + err.Error())
+		config := DefaultConfig()
+		if testThread == "single" {
+			config.NumThreads = 1
+			_, eventsPerSecond, _ := RunBenchmark(config)
+			if language == "en" {
+				result += "1 Thread(s) Test: "
+			} else {
+				result += "1 线程测试(单核)得分: "
+			}
+			result += fmt.Sprintf("%.2f\n", eventsPerSecond)
+			return result
+		} else if testThread == "multi" {
+			// 单线程测试
+			config.NumThreads = 1
+			_, singleThreadScore, _ := RunBenchmark(config)
+			if language == "en" {
+				result += "1 Thread(s) Test: "
+			} else {
+				result += "1 线程测试(单核)得分: "
+			}
+			result += fmt.Sprintf("%.2f\n", singleThreadScore)
+			// 多线程测试
+			if runtime.NumCPU() > 1 {
+				time.Sleep(1 * time.Second)
+				config.NumThreads = runtime.NumCPU()
+				_, multiThreadScore, _ := RunBenchmark(config)
+				if language == "en" {
+					result += fmt.Sprintf("%d Thread(s) Test: ", runtime.NumCPU())
+				} else {
+					result += fmt.Sprintf("%d 线程测试(多核)得分: ", runtime.NumCPU())
+				}
+				result += fmt.Sprintf("%.2f\n", multiThreadScore)
+			}
+			return result
 		}
 		return ""
 	}
@@ -111,7 +144,6 @@ func SysBenchTest(language, testThread string) string {
 			}
 			return ""
 		}
-
 		tempList := strings.Split(singleResult, "\n")
 		for _, line := range tempList {
 			if strings.Contains(line, "events per second:") {
@@ -175,9 +207,9 @@ func SysBenchTest(language, testThread string) string {
 				totalTime, totalEvents = "", ""
 			}
 			if language == "en" {
-				result += fmt.Sprintf("%d", runtime.NumCPU()) + " Thread(s) Test: "
+				result += fmt.Sprintf("%d Thread(s) Test: ", runtime.NumCPU())
 			} else {
-				result += fmt.Sprintf("%d", runtime.NumCPU()) + " 线程测试(多核)得分: "
+				result += fmt.Sprintf("%d 线程测试(多核)得分: ", runtime.NumCPU())
 			}
 			result += multiScore + "\n"
 		}
