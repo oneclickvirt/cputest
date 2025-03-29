@@ -18,6 +18,11 @@ CPU测试模块 (CPU Test Module)
 - [x] 全平台编译支持
 - [x] 下载```geekbench```前检测本机剩余内存是否足以进行测试，检测是否有IPV4网络以获取结果，自动切换下载的版本
 
+## TODO
+
+- [ ] 修复WIN系统的虚拟下的CPU测试无法使用winsat的问题
+- [ ] 适配MACOS系统测试
+
 # 环境准备
 
 ## sysbench
