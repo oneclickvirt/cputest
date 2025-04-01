@@ -20,7 +20,6 @@ CPU测试模块 (CPU Test Module)
 
 ## TODO
 
-- [ ] 修复WIN系统的虚拟下的CPU测试无法使用winsat的问题
 - [ ] 适配MACOS系统测试
 
 # 环境准备

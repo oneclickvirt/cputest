@@ -40,9 +40,9 @@ func SysBenchTest(language, testThread string) string {
 		if err == nil {
 			contentStr := string(content)
 			// 检查是否包含 BSD 相关标识
-			if strings.Contains(contentStr, "freebsd") || 
-               strings.Contains(contentStr, "openbsd") || 
-               strings.Contains(contentStr, "netbsd") {
+			if strings.Contains(contentStr, "freebsd") ||
+				strings.Contains(contentStr, "openbsd") ||
+				strings.Contains(contentStr, "netbsd") {
 				isBSDSystem = true
 			}
 		}
@@ -295,11 +295,14 @@ func WinsatTest(language, testThread string) string {
 		defer Logger.Sync()
 	}
 	var result string
-	cmd1 := exec.Command("winsat", "cpu", "-encryption")
+	cmd1 := exec.Command("winsat", "cpu", "-encryption") // winsat cpu -encryption
 	output1, err1 := cmd1.Output()
-	if err1 != nil {
+	if err1 != nil { // 命令不存在时使用原生实现的sysbench
 		logError("winsat cpu encryption error: ", err1)
-		return ""
+		return runInternalBenchmark(language, testThread)
+	} else if strings.Contains(strings.ToLower(string(output1)), "error") ||
+		strings.Contains(string(output1), "错误") { // 命令报错时使用原生实现的sysbench
+		return runInternalBenchmark(language, testThread)
 	} else {
 		tempList := strings.Split(string(output1), "\n")
 		for _, l := range tempList {
