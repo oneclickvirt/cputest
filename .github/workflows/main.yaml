@@ -44,6 +44,8 @@ jobs:
             goos: darwin
           - goarch: 386
             goos: openbsd
+          - goarch: 386
+            goos: freebsd
         include:
           - goos: windows
             goarch: arm64
