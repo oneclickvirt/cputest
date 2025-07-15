@@ -46,10 +46,6 @@ jobs:
             goos: openbsd
         include:
           - goos: windows
-            goarch: 386
-          - goos: windows
-            goarch: amd64
-          - goos: windows
             goarch: arm64
           - goos: windows
             goarch: arm
@@ -95,14 +91,75 @@ jobs:
       with:
         go-version: 'stable'
 
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          gcc-multilib \
+          gcc-arm-linux-gnueabihf \
+          gcc-aarch64-linux-gnu \
+          gcc-riscv64-linux-gnu \
+          gcc-mips64-linux-gnuabi64 \
+          gcc-mips64el-linux-gnuabi64 \
+          gcc-mipsel-linux-gnu \
+          gcc-mips-linux-gnu \
+          gcc-powerpc64-linux-gnu \
+          gcc-powerpc64le-linux-gnu \
+          clang lld llvm jq curl
+
+    - name: Set cross compiler
+      id: setcc
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+        GOARM: ${{ matrix.goarm || '' }}
+      run: |
+        case "${GOOS}-${GOARCH}" in
+          linux-arm)
+            echo "CC=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV ;;
+          linux-arm64)
+            echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV ;;
+          linux-riscv64)
+            echo "CC=riscv64-linux-gnu-gcc" >> $GITHUB_ENV ;;
+          linux-mips64)
+            echo "CC=mips64-linux-gnuabi64-gcc" >> $GITHUB_ENV ;;
+          linux-mips64le)
+            echo "CC=mips64el-linux-gnuabi64-gcc" >> $GITHUB_ENV ;;
+          linux-mipsle)
+            echo "CC=mipsel-linux-gnu-gcc" >> $GITHUB_ENV ;;
+          linux-mips)
+            echo "CC=mips-linux-gnu-gcc" >> $GITHUB_ENV ;;
+          linux-ppc64)
+            echo "CC=powerpc64-linux-gnu-gcc" >> $GITHUB_ENV ;;
+          linux-ppc64le)
+            echo "CC=powerpc64le-linux-gnu-gcc" >> $GITHUB_ENV ;;
+          freebsd-arm)
+            echo "CC=clang --target=armv7-unknown-freebsd" >> $GITHUB_ENV ;;
+          freebsd-arm64)
+            echo "CC=clang --target=aarch64-unknown-freebsd" >> $GITHUB_ENV ;;
+          openbsd-arm)
+            echo "CC=clang --target=armv7-unknown-openbsd" >> $GITHUB_ENV ;;
+          openbsd-arm64)
+            echo "CC=clang --target=aarch64-unknown-openbsd" >> $GITHUB_ENV ;;
+          windows-arm)
+            echo "CC=clang --target=armv7-windows-gnu" >> $GITHUB_ENV ;;
+          windows-arm64)
+            echo "CC=clang --target=aarch64-windows-gnu" >> $GITHUB_ENV ;;
+          darwin-arm64)
+            echo "CC=clang --target=arm64-apple-darwin" >> $GITHUB_ENV ;;
+        esac
+
     - name: Build and Release
       env:
         GOARM: ${{ matrix.goarm || '' }}
+        CC: ${{ env.CC }}
       run: |
         mkdir -p bin
         cd cmd
-        CGO_ENABLED=1 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOARM=$GOARM go build \
-          -o ../bin/cputest-${{ matrix.goos }}-${{ matrix.goarch }} \
+
+        echo "Building with CC=$CC"
+        CGO_ENABLED=1 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOARM=$GOARM \
+          go build -o ../bin/cputest-${{ matrix.goos }}-${{ matrix.goarch }} \
           -v \
           -ldflags="-extldflags=-static -s -w" \
           -trimpath \
