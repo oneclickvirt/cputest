@@ -91,47 +91,45 @@ jobs:
       with:
         go-version: 'stable'
 
-    - name: Install dependencies
+    - name: Install base build tools
       run: |
         sudo apt-get update
-        sudo apt-get install -y \
-          gcc-multilib \
-          gcc-arm-linux-gnueabihf \
-          gcc-aarch64-linux-gnu \
-          gcc-riscv64-linux-gnu \
-          gcc-mips64-linux-gnuabi64 \
-          gcc-mips64el-linux-gnuabi64 \
-          gcc-mipsel-linux-gnu \
-          gcc-mips-linux-gnu \
-          gcc-powerpc64-linux-gnu \
-          gcc-powerpc64le-linux-gnu \
-          clang lld llvm jq curl
+        sudo apt-get install -y clang lld llvm jq curl
 
     - name: Set cross compiler
-      id: setcc
       env:
         GOOS: ${{ matrix.goos }}
         GOARCH: ${{ matrix.goarch }}
         GOARM: ${{ matrix.goarm || '' }}
       run: |
+        set -e
         case "${GOOS}-${GOARCH}" in
           linux-arm)
+            sudo apt-get install -y gcc-arm-linux-gnueabihf
             echo "CC=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV ;;
           linux-arm64)
+            sudo apt-get install -y gcc-aarch64-linux-gnu
             echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV ;;
           linux-riscv64)
+            sudo apt-get install -y gcc-riscv64-linux-gnu
             echo "CC=riscv64-linux-gnu-gcc" >> $GITHUB_ENV ;;
           linux-mips64)
+            sudo apt-get install -y gcc-mips64-linux-gnuabi64
             echo "CC=mips64-linux-gnuabi64-gcc" >> $GITHUB_ENV ;;
           linux-mips64le)
+            sudo apt-get install -y gcc-mips64el-linux-gnuabi64
             echo "CC=mips64el-linux-gnuabi64-gcc" >> $GITHUB_ENV ;;
           linux-mipsle)
+            sudo apt-get install -y gcc-mipsel-linux-gnu
             echo "CC=mipsel-linux-gnu-gcc" >> $GITHUB_ENV ;;
           linux-mips)
+            sudo apt-get install -y gcc-mips-linux-gnu
             echo "CC=mips-linux-gnu-gcc" >> $GITHUB_ENV ;;
           linux-ppc64)
+            sudo apt-get install -y gcc-powerpc64-linux-gnu
             echo "CC=powerpc64-linux-gnu-gcc" >> $GITHUB_ENV ;;
           linux-ppc64le)
+            sudo apt-get install -y gcc-powerpc64le-linux-gnu
             echo "CC=powerpc64le-linux-gnu-gcc" >> $GITHUB_ENV ;;
           freebsd-arm)
             echo "CC=clang --target=armv7-unknown-freebsd" >> $GITHUB_ENV ;;
@@ -156,8 +154,8 @@ jobs:
       run: |
         mkdir -p bin
         cd cmd
+        echo "Building for ${{ matrix.goos }}/${{ matrix.goarch }} with CC=$CC"
 
-        echo "Building with CC=$CC"
         CGO_ENABLED=1 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOARM=$GOARM \
           go build -o ../bin/cputest-${{ matrix.goos }}-${{ matrix.goarch }} \
           -v \
