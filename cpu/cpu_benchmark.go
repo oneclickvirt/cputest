@@ -1,6 +1,7 @@
 package cpu
 
 // #cgo CFLAGS: -std=c11
+// #cgo LDFLAGS: -lm
 // #include "cpu_benchmark.h"
 import "C"
 import (
