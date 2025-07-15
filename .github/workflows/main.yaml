@@ -185,17 +185,21 @@ jobs:
             -v \
             -ldflags="-extldflags=-static -s -w" \
             -trimpath \
-            .
+            . || true
 
       - name: Upload New Assets
         run: |
           release_id=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/oneclickvirt/cputest/releases/tags/output" | jq -r '.id')
           echo "Uploading new assets to release..."
           for file in ./bin/*; do
-            echo "Uploading $file to release..."
-            curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              -H "Content-Type: application/octet-stream" \
-              --data-binary @"$file" \
-              "https://uploads.github.com/repos/oneclickvirt/cputest/releases/$release_id/assets?name=$(basename "$file")"
-            rm -rf $file
+            if [ -f "$file" ]; then
+              echo "Uploading $file to release..."
+              curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                -H "Content-Type: application/octet-stream" \
+                --data-binary @"$file" \
+                "https://uploads.github.com/repos/oneclickvirt/cputest/releases/$release_id/assets?name=$(basename "$file")"
+              rm -rf "$file"
+            else
+              echo "Skipping $file, file does not exist."
+            fi
           done
