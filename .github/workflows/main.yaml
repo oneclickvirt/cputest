@@ -101,7 +101,7 @@ jobs:
       run: |
         mkdir -p bin
         cd cmd
-        CGO_ENABLED=1 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOARM=$GOARM go build \
+        CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOARM=$GOARM go build \
           -o ../bin/cputest-${{ matrix.goos }}-${{ matrix.goarch }} \
           -v \
           -ldflags="-extldflags=-static -s -w" \
