@@ -23,19 +23,24 @@ jobs:
       - name: Delete Existing Release Assets
         run: |
           release_id=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/oneclickvirt/cputest/releases/tags/output" | jq -r '.id')
-          echo "Deleting existing release assets..."
-          assets=$(curl -s -H "Accept: application/vnd.github.v3+json" "https://api.github.com/repos/oneclickvirt/cputest/releases/$release_id/assets" | jq -r '.[] | .id')
-          for asset in $assets; do
-            echo "Deleting asset with ID: $asset"
-            curl -X DELETE -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/oneclickvirt/cputest/releases/assets/$asset"
-          done
-          sleep 60
+          if [ "$release_id" != "null" ]; then
+            echo "Deleting existing release assets..."
+            assets=$(curl -s -H "Accept: application/vnd.github.v3+json" "https://api.github.com/repos/oneclickvirt/cputest/releases/$release_id/assets" | jq -r '.[] | .id')
+            for asset in $assets; do
+              echo "Deleting asset with ID: $asset"
+              curl -s -X DELETE -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/oneclickvirt/cputest/releases/assets/$asset"
+            done
+            sleep 10
+          else
+            echo "No existing release found, skipping asset deletion"
+          fi
 
   release-binary:
     name: Release Go Binary
     runs-on: ubuntu-latest
     needs: build
     strategy:
+      fail-fast: false
       matrix:
         goos: [windows, freebsd, linux, darwin]
         goarch: [amd64, 386]
@@ -86,7 +91,7 @@ jobs:
         with:
           go-version: 'stable'
 
-      - name: Install base build tools and cross compilers (按需安装)
+      - name: Install base build tools and cross compilers
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential clang lld llvm jq curl gcc-multilib g++-multilib
@@ -112,6 +117,8 @@ jobs:
               sudo apt-get install -y gcc-powerpc64le-linux-gnu ;;
             windows-amd64|windows-386)
               sudo apt-get install -y gcc-mingw-w64-x86-64 gcc-mingw-w64-i686 ;;
+            freebsd-*)
+              sudo apt-get install -y clang lld ;;
             *)
               echo "No additional cross compiler needed for ${{ matrix.goos }}-${{ matrix.goarch }}" ;;
           esac
@@ -168,51 +175,55 @@ jobs:
             darwin-arm64)
               echo "CC=clang --target=arm64-apple-darwin" >> $GITHUB_ENV ;;
             *)
-              echo "No special cross compiler needed for ${GOOS}-${GOARCH}" ;;
+              echo "Using default system compiler for ${GOOS}-${GOARCH}" ;;
           esac
 
-      - name: Build and Release
+      - name: Build Binary
         env:
           GOARM: ${{ matrix.goarm || '' }}
           CC: ${{ env.CC }}
         run: |
           mkdir -p bin
           cd cmd
-          echo "Building for ${{ matrix.goos }}/${{ matrix.goarch }} with CC=$CC"
-
+          output_file="../bin/cputest-${{ matrix.goos }}-${{ matrix.goarch }}"
+          
+          echo "::group::Building for ${{ matrix.goos }}/${{ matrix.goarch }}"
+          set +e
           CGO_ENABLED=1 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOARM=$GOARM \
-            CC="$CC" \
-            go build -o ../bin/cputest-${{ matrix.goos }}-${{ matrix.goarch }} \
+            go build -o "$output_file" \
             -v \
             -ldflags="-extldflags=-static -s -w" \
             -trimpath \
-            . 
+            .
           
-          build_status=$?
-
-          if [ $build_status -ne 0 ]; then
-            echo "Build failed for ${{ matrix.goos }}-${{ matrix.goarch }}. Skipping upload for this target."
-            exit 0
+          build_exit=$?
+          echo "::endgroup::"
+          
+          if [ $build_exit -ne 0 ]; then
+            echo "::warning::Build failed for ${{ matrix.goos }}/${{ matrix.goarch }}"
+            rm -f "$output_file" 2>/dev/null
           else
-            echo "Build succeeded for ${{ matrix.goos }}-${{ matrix.goarch }}"
+            echo "Successfully built: $output_file"
           fi
 
-      - name: Upload New Assets
-        if: success()
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Artifact
+        if: success() || failure()
         run: |
-          release_id=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/oneclickvirt/cputest/releases/tags/output" | jq -r '.id')
-          echo "Release ID: $release_id"
-          BIN_PATH=./bin/cputest-${{ matrix.goos }}-${{ matrix.goarch }}
-
-          if [ -f "$BIN_PATH" ]; then
-            echo "Uploading $BIN_PATH to release..."
-            curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+          release_id=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/oneclickvirt/cputest/releases/tags/output" | jq -r '.id')
+          if [ -z "$release_id" ] || [ "$release_id" = "null" ]; then
+            echo "::error::Failed to get release ID"
+            exit 1
+          fi
+          
+          bin_path="./bin/cputest-${{ matrix.goos }}-${{ matrix.goarch }}"
+          if [ -f "$bin_path" ]; then
+            echo "Uploading $bin_path to release..."
+            curl -s \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
               -H "Content-Type: application/octet-stream" \
-              --data-binary @"$BIN_PATH" \
-              "https://uploads.github.com/repos/oneclickvirt/cputest/releases/$release_id/assets?name=$(basename "$BIN_PATH")"
-            rm -f "$BIN_PATH"
+              --data-binary @"$bin_path" \
+              "https://uploads.github.com/repos/oneclickvirt/cputest/releases/$release_id/assets?name=$(basename "$bin_path")"
+            echo "Upload completed for $bin_path"
           else
-            echo "Binary $BIN_PATH does not exist, skipping upload."
+            echo "::warning::Skipping upload for ${{ matrix.goos }}/${{ matrix.goarch }} - no build artifact"
           fi
