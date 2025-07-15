@@ -37,13 +37,13 @@ jobs:
     needs: build
     strategy:
       matrix:
-        goos: [windows, freebsd, openbsd, linux, darwin]
+        goos: [windows, freebsd, linux, darwin] # openbsd
         goarch: [amd64, 386]
         exclude:
           - goarch: 386
             goos: darwin
-          - goarch: 386
-            goos: openbsd
+          # - goarch: 386
+          #   goos: openbsd
           - goarch: 386
             goos: freebsd
         include:
@@ -137,10 +137,10 @@ jobs:
             echo "CC=clang --target=armv7-unknown-freebsd" >> $GITHUB_ENV ;;
           freebsd-arm64)
             echo "CC=clang --target=aarch64-unknown-freebsd" >> $GITHUB_ENV ;;
-          openbsd-arm)
-            echo "CC=clang --target=armv7-unknown-openbsd" >> $GITHUB_ENV ;;
-          openbsd-arm64)
-            echo "CC=clang --target=aarch64-unknown-openbsd" >> $GITHUB_ENV ;;
+          # openbsd-arm)
+          #   echo "CC=clang --target=armv7-unknown-openbsd" >> $GITHUB_ENV ;;
+          # openbsd-arm64)
+          #   echo "CC=clang --target=aarch64-unknown-openbsd" >> $GITHUB_ENV ;;
           windows-arm)
             echo "CC=clang --target=armv7-windows-gnu" >> $GITHUB_ENV ;;
           windows-arm64)
