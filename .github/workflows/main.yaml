@@ -181,25 +181,38 @@ jobs:
           echo "Building for ${{ matrix.goos }}/${{ matrix.goarch }} with CC=$CC"
 
           CGO_ENABLED=1 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOARM=$GOARM \
+            CC="$CC" \
             go build -o ../bin/cputest-${{ matrix.goos }}-${{ matrix.goarch }} \
             -v \
             -ldflags="-extldflags=-static -s -w" \
             -trimpath \
-            . || true
+            . 
+          
+          build_status=$?
+
+          if [ $build_status -ne 0 ]; then
+            echo "Build failed for ${{ matrix.goos }}-${{ matrix.goarch }}. Skipping upload for this target."
+            exit 0
+          else
+            echo "Build succeeded for ${{ matrix.goos }}-${{ matrix.goarch }}"
+          fi
 
       - name: Upload New Assets
+        if: success()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          release_id=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/oneclickvirt/cputest/releases/tags/output" | jq -r '.id')
-          echo "Uploading new assets to release..."
-          for file in ./bin/*; do
-            if [ -f "$file" ]; then
-              echo "Uploading $file to release..."
-              curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-                -H "Content-Type: application/octet-stream" \
-                --data-binary @"$file" \
-                "https://uploads.github.com/repos/oneclickvirt/cputest/releases/$release_id/assets?name=$(basename "$file")"
-              rm -rf "$file"
-            else
-              echo "Skipping $file, file does not exist."
-            fi
-          done
+          release_id=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/oneclickvirt/cputest/releases/tags/output" | jq -r '.id')
+          echo "Release ID: $release_id"
+          BIN_PATH=./bin/cputest-${{ matrix.goos }}-${{ matrix.goarch }}
+
+          if [ -f "$BIN_PATH" ]; then
+            echo "Uploading $BIN_PATH to release..."
+            curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary @"$BIN_PATH" \
+              "https://uploads.github.com/repos/oneclickvirt/cputest/releases/$release_id/assets?name=$(basename "$BIN_PATH")"
+            rm -f "$BIN_PATH"
+          else
+            echo "Binary $BIN_PATH does not exist, skipping upload."
+          fi
