@@ -60,6 +60,8 @@ Usage: cputest [options]
   -v    show version
 ```
 
+如果安装脚本未包含对应架构和系统，可自行到 https://github.com/oneclickvirt/cputest/releases/tag/output 查找对应架构和系统下载使用
+
 ## 卸载
 
 ```
