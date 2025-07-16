@@ -27,7 +27,7 @@ jobs:
               echo "Deleting asset with ID: $asset"
               curl -s -X DELETE -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/oneclickvirt/cputest/releases/assets/$asset"
             done
-            sleep 10
+            sleep 30
           else
             echo "No existing release found, skipping asset deletion"
           fi
@@ -39,8 +39,12 @@ jobs:
       fail-fast: false
       matrix:
         goos: [windows, freebsd, openbsd, netbsd, linux, darwin]
-        goarch: [amd64, 386]
+        goarch: [amd64, 386, s390x]
         exclude:
+          - goarch: s390x
+            goos: windows
+          - goarch: s390x
+            goos: darwin
           - goarch: 386
             goos: darwin
           - goarch: 386
