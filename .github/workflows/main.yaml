@@ -9,17 +9,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: 'stable'
-
+          go-version: "stable"
       - name: Build and Test on Default Platform
         run: |
           go build -v ./...
           go test -v ./...
-
       - name: Delete Existing Release Assets
         run: |
           release_id=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/oneclickvirt/cputest/releases/tags/output" | jq -r '.id')
@@ -34,10 +31,9 @@ jobs:
           else
             echo "No existing release found, skipping asset deletion"
           fi
-
   release-binary:
     name: Release Go Binary
-    runs-on: ubuntu-latest
+    runs-on: ${{ (matrix.goos == 'windows' && matrix.goarch == 'arm64') && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     needs: build
     strategy:
       fail-fast: false
@@ -81,48 +77,45 @@ jobs:
           - goos: freebsd
             goarch: arm
             goarm: 7
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: 'stable'
-
+          go-version: "stable"
       - name: Install base build tools and cross compilers
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential clang lld llvm jq curl gcc-multilib g++-multilib
-
-          case "${{ matrix.goos }}-${{ matrix.goarch }}" in
-            linux-arm)
-              sudo apt-get install -y gcc-arm-linux-gnueabihf ;;
-            linux-arm64)
-              sudo apt-get install -y gcc-aarch64-linux-gnu ;;
-            linux-riscv64)
-              sudo apt-get install -y gcc-riscv64-linux-gnu ;;
-            linux-mips64)
-              sudo apt-get install -y gcc-mips64-linux-gnuabi64 ;;
-            linux-mips64le)
-              sudo apt-get install -y gcc-mips64el-linux-gnuabi64 ;;
-            linux-mipsle)
-              sudo apt-get install -y gcc-mipsel-linux-gnu ;;
-            linux-mips)
-              sudo apt-get install -y gcc-mips-linux-gnu ;;
-            linux-ppc64)
-              sudo apt-get install -y gcc-powerpc64-linux-gnu ;;
-            linux-ppc64le)
-              sudo apt-get install -y gcc-powerpc64le-linux-gnu ;;
-            windows-amd64|windows-386)
-              sudo apt-get install -y gcc-mingw-w64-x86-64 gcc-mingw-w64-i686 ;;
-            freebsd-*)
-              sudo apt-get install -y clang lld ;;
-            *)
-              echo "No additional cross compiler needed for ${{ matrix.goos }}-${{ matrix.goarch }}" ;;
-          esac
-
+          if [ "${{ matrix.goos }}-${{ matrix.goarch }}" != "windows-arm64" ] || [ "${{ runner.os }}" != "Linux" ] || [ "${{ runner.arch }}" != "ARM64" ]; then
+            case "${{ matrix.goos }}-${{ matrix.goarch }}" in
+              linux-arm)
+                sudo apt-get install -y gcc-arm-linux-gnueabihf ;;
+              linux-arm64)
+                sudo apt-get install -y gcc-aarch64-linux-gnu ;;
+              linux-riscv64)
+                sudo apt-get install -y gcc-riscv64-linux-gnu ;;
+              linux-mips64)
+                sudo apt-get install -y gcc-mips64-linux-gnuabi64 ;;
+              linux-mips64le)
+                sudo apt-get install -y gcc-mips64el-linux-gnuabi64 ;;
+              linux-mipsle)
+                sudo apt-get install -y gcc-mipsel-linux-gnu ;;
+              linux-mips)
+                sudo apt-get install -y gcc-mips-linux-gnu ;;
+              linux-ppc64)
+                sudo apt-get install -y gcc-powerpc64-linux-gnu ;;
+              linux-ppc64le)
+                sudo apt-get install -y gcc-powerpc64le-linux-gnu ;;
+              windows-amd64|windows-386)
+                sudo apt-get install -y gcc-mingw-w64-x86-64 gcc-mingw-w64-i686 ;;
+              freebsd-*)
+                sudo apt-get install -y clang lld ;;
+              *)
+                echo "No additional cross compiler needed" ;;
+            esac
+          fi
       - name: Set up FreeBSD sysroot
         if: ${{ matrix.goos == 'freebsd' }}
         run: |
@@ -132,7 +125,6 @@ jobs:
           sudo tar -C /tmp/freebsd-sysroot -xf base.txz
           rm base.txz
           echo "SYSROOT=/tmp/freebsd-sysroot" >> $GITHUB_ENV
-
       - name: Set cross compiler
         env:
           GOOS: ${{ matrix.goos }}
@@ -168,16 +160,20 @@ jobs:
               echo "CC=x86_64-w64-mingw32-gcc" >> $GITHUB_ENV ;;
             windows-386)
               echo "CC=i686-w64-mingw32-gcc" >> $GITHUB_ENV ;;
-            windows-arm)
-              echo "CC=clang --target=armv7-windows-gnu" >> $GITHUB_ENV ;;
-            windows-arm64)
-              echo "CC=clang --target=aarch64-windows-gnu" >> $GITHUB_ENV ;;
+            windows-arm|windows-arm64)
+              if [ "${{ runner.os }}" == "Linux" ] && [ "${{ runner.arch }}" == "ARM64" ]; then
+                echo "Using native ARM64 compiler"
+                echo "CC=gcc" >> $GITHUB_ENV
+              else
+                echo "::error::Windows ARM requires ARM runner"
+                exit 1
+              fi
+              ;;
             darwin-arm64)
               echo "CC=clang --target=arm64-apple-darwin" >> $GITHUB_ENV ;;
             *)
               echo "Using default system compiler for ${GOOS}-${GOARCH}" ;;
           esac
-
       - name: Build Binary
         env:
           GOARM: ${{ matrix.goarm || '' }}
@@ -186,26 +182,36 @@ jobs:
           mkdir -p bin
           cd cmd
           output_file="../bin/cputest-${{ matrix.goos }}-${{ matrix.goarch }}"
-          
           echo "::group::Building for ${{ matrix.goos }}/${{ matrix.goarch }}"
           set +e
-          CGO_ENABLED=1 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOARM=$GOARM \
-            go build -o "$output_file" \
-            -v \
-            -ldflags="-extldflags=-static -s -w" \
-            -trimpath \
-            .
-          
+          if [ "${{ matrix.goos }}" == "windows" ] && [[ "${{ matrix.goarch }}" == "arm"* ]]; then
+            if [ "${{ runner.os }}" == "Linux" ] && [ "${{ runner.arch }}" == "ARM64" ]; then
+              CGO_ENABLED=1 GOOS=windows GOARCH=${{ matrix.goarch }} GOARM=$GOARM \
+                go build -o "$output_file" \
+                -v \
+                -ldflags="-extldflags=-static -s -w" \
+                -trimpath \
+                .
+            else
+              echo "::error::Skipping build on non-ARM runner"
+              exit 1
+            fi
+          else
+            CGO_ENABLED=1 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOARM=$GOARM \
+              go build -o "$output_file" \
+              -v \
+              -ldflags="-extldflags=-static -s -w" \
+              -trimpath \
+              .
+          fi
           build_exit=$?
           echo "::endgroup::"
-          
           if [ $build_exit -ne 0 ]; then
             echo "::warning::Build failed for ${{ matrix.goos }}/${{ matrix.goarch }}"
             rm -f "$output_file" 2>/dev/null
           else
             echo "Successfully built: $output_file"
           fi
-
       - name: Upload Artifact
         if: success() || failure()
         run: |
@@ -214,7 +220,6 @@ jobs:
             echo "::error::Failed to get release ID"
             exit 1
           fi
-          
           bin_path="./bin/cputest-${{ matrix.goos }}-${{ matrix.goarch }}"
           if [ -f "$bin_path" ]; then
             echo "Uploading $bin_path to release..."
