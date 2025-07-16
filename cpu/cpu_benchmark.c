@@ -19,6 +19,15 @@ void portable_sleep_ms(int milliseconds) {
 }
 #endif
 
+// 根据系统架构自动调整最大延迟样本数量
+#if defined(__LP64__) || defined(_WIN64) || (defined(__WORDSIZE) && __WORDSIZE == 64) || defined(__x86_64__) || defined(__amd64__) || defined(__aarch64__)
+    // 64位系统
+    #define MAX_LATENCY_SAMPLES 100000000  // 100M samples
+#else
+    // 32位系统或嵌入式系统
+    #define MAX_LATENCY_SAMPLES 1000000    // 1M samples
+#endif
+
 typedef struct
 {
     int max_prime;
@@ -102,6 +111,17 @@ BenchmarkResult *run_benchmark(Config config)
     int done = 0;
     int latency_count = 0;
     int latency_capacity = config.max_events;
+    if (latency_capacity > MAX_LATENCY_SAMPLES) {
+        latency_capacity = MAX_LATENCY_SAMPLES;
+    }
+    size_t required_bytes = (size_t)latency_capacity * sizeof(double);
+    size_t max_safe_bytes = SIZE_MAX / 4;
+    if (required_bytes > max_safe_bytes) {
+        latency_capacity = (int)(max_safe_bytes / sizeof(double));
+    }
+    if (latency_capacity < 1000) {
+        latency_capacity = 1000;
+    }
     double *latencies = (double *)malloc(latency_capacity * sizeof(double));
     pthread_mutex_t latency_mutex = PTHREAD_MUTEX_INITIALIZER;
     if (!latencies)
@@ -139,7 +159,6 @@ BenchmarkResult *run_benchmark(Config config)
     clock_gettime(CLOCK_MONOTONIC, &end_time);
     double duration = (end_time.tv_sec - start_time.tv_sec) +
                       (end_time.tv_nsec - start_time.tv_nsec) / 1000000000.0;
-
     BenchmarkResult *result = (BenchmarkResult *)malloc(sizeof(BenchmarkResult));
     if (!result)
     {
