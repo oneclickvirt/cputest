@@ -1,6 +1,6 @@
 #!/bin/bash
 #From https://github.com/oneclickvirt/cputest
-#2024.08.05
+#2025.07.16
 
 rm -rf /usr/bin/cputest
 rm -rf cputest
@@ -54,6 +54,7 @@ get_cputest_url() {
                 "x86_64" | "x86" | "amd64" | "x64") echo "cputest-linux-amd64" ;;
                 "i386" | "i686") echo "cputest-linux-386" ;;
                 "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64") echo "cputest-linux-arm64" ;;
+                "s390x" | "s390") echo "cputest-linux-s390x" ;;
                 *) return 1 ;;
             esac
             ;;
@@ -70,6 +71,7 @@ get_cputest_url() {
                 amd64) echo "cputest-freebsd-amd64" ;;
                 "i386" | "i686") echo "cputest-freebsd-386" ;;
                 "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64") echo "cputest-freebsd-arm64" ;;
+                "s390x" | "s390") echo "cputest-freebsd-s390x" ;;
                 *) return 1 ;;
             esac
             ;;
@@ -78,6 +80,7 @@ get_cputest_url() {
                 amd64) echo "cputest-openbsd-amd64" ;;
                 "i386" | "i686") echo "cputest-openbsd-386" ;;
                 "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64") echo "cputest-openbsd-arm64" ;;
+                "s390x" | "s390") echo "cputest-openbsd-s390x" ;;
                 *) return 1 ;;
             esac
             ;;
