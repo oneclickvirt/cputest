@@ -1,3 +1,5 @@
+//go:build 386 || arm || mips || mipsle
+
 package cpu
 
 // #cgo CFLAGS: -std=c11
@@ -41,9 +43,18 @@ func RunBenchmark(config Config) (uint64, float64, []float64) {
 	eventsPerSecond := float64(cResult.events_per_second)
 	latencies := make([]float64, int(cResult.latency_count))
 	if cResult.latency_count > 0 {
-		cLatencies := (*[1 << 30]C.double)(unsafe.Pointer(cResult.latencies))[:cResult.latency_count:cResult.latency_count]
-		for i, lat := range cLatencies {
-			latencies[i] = float64(lat)
+		const maxArraySize = 1 << 20
+		arraySize := int(cResult.latency_count)
+		if arraySize > maxArraySize {
+			arraySize = maxArraySize
+		}
+		cLatencies := (*[1 << 20]C.double)(unsafe.Pointer(cResult.latencies))[:arraySize:arraySize]
+		copyCount := int(cResult.latency_count)
+		if copyCount > len(cLatencies) {
+			copyCount = len(cLatencies)
+		}
+		for i := 0; i < copyCount; i++ {
+			latencies[i] = float64(cLatencies[i])
 		}
 	}
 	return totalEvents, eventsPerSecond, latencies
