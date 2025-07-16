@@ -1,4 +1,4 @@
-//go:build 386 || arm || mips || mipsle
+//go:build (386 || arm) && !((freebsd || openbsd || netbsd || darwin) && (386 || arm)) && !(windows && arm)
 
 package cpu
 

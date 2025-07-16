@@ -38,13 +38,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        goos: [windows, freebsd, linux, darwin]
+        goos: [windows, freebsd, openbsd, netbsd, linux, darwin]
         goarch: [amd64, 386]
         exclude:
           - goarch: 386
             goos: darwin
           - goarch: 386
             goos: freebsd
+          - goarch: 386
+            goos: openbsd
+          - goarch: 386
+            goos: netbsd
         include:
           - goos: windows
             goarch: arm64
@@ -75,6 +79,16 @@ jobs:
           - goos: freebsd
             goarch: arm64
           - goos: freebsd
+            goarch: arm
+            goarm: 7
+          - goos: openbsd
+            goarch: arm64
+          - goos: openbsd
+            goarch: arm
+            goarm: 7
+          - goos: netbsd
+            goarch: arm64
+          - goos: netbsd
             goarch: arm
             goarm: 7
     steps:
@@ -119,38 +133,23 @@ jobs:
               if [ "${{ runner.arch }}" != "ARM64" ]; then
                 sudo apt-get install -y gcc-mingw-w64-x86-64 gcc-mingw-w64-i686
               fi ;;
-            freebsd-*)
+            freebsd-*|openbsd-*|netbsd-*)
               sudo apt-get install -y clang lld ;;
             *)
               echo "No additional cross compiler needed" ;;
           esac
-      - name: Set up FreeBSD sysroot
-        if: ${{ matrix.goos == 'freebsd' }}
+      - name: Determine CGO requirement
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
         run: |
-          mkdir -p /tmp/freebsd-sysroot
-          echo "Downloading FreeBSD base.txz for sysroot..."
-          if [ "${{ matrix.goarch }}" == "amd64" ]; then
-            curl -L -o base.txz https://download.freebsd.org/ftp/releases/amd64/14.1-RELEASE/base.txz
-          elif [ "${{ matrix.goarch }}" == "arm64" ]; then
-            curl -L -o base.txz https://download.freebsd.org/ftp/releases/arm64/aarch64/14.1-RELEASE/base.txz
-          elif [ "${{ matrix.goarch }}" == "arm" ]; then
-            curl -L -o base.txz https://download.freebsd.org/ftp/releases/arm/armv7/14.1-RELEASE/base.txz
+          if [[ ("$GOARCH" == "386" || "$GOARCH" == "arm") && !(("$GOOS" == "freebsd" || "$GOOS" == "openbsd" || "$GOOS" == "netbsd" || "$GOOS" == "darwin") && ("$GOARCH" == "386" || "$GOARCH" == "arm")) && !("$GOOS" == "windows" && "$GOARCH" == "arm") ]]; then
+            echo "NEED_CGO=1" >> $GITHUB_ENV
+          elif [[ ("$GOARCH" == "amd64" || "$GOARCH" == "arm64" || "$GOARCH" == "riscv64" || "$GOARCH" == "mips64" || "$GOARCH" == "mips64le" || "$GOARCH" == "ppc64le") && !(("$GOOS" == "freebsd" || "$GOOS" == "openbsd" || "$GOOS" == "netbsd" || "$GOOS" == "darwin") && ("$GOARCH" == "amd64" || "$GOARCH" == "arm64")) && !("$GOOS" == "windows" && "$GOARCH" == "arm64") ]]; then
+            echo "NEED_CGO=1" >> $GITHUB_ENV
           else
-            curl -L -o base.txz https://download.freebsd.org/ftp/releases/amd64/14.1-RELEASE/base.txz
+            echo "NEED_CGO=0" >> $GITHUB_ENV
           fi
-          sudo tar -C /tmp/freebsd-sysroot -xf base.txz
-          rm base.txz
-          echo "SYSROOT=/tmp/freebsd-sysroot" >> $GITHUB_ENV
-      - name: Set up Darwin SDK
-        if: ${{ matrix.goos == 'darwin' }}
-        run: |
-          git clone https://github.com/tpoechtrager/osxcross
-          cd osxcross
-          wget -nc https://github.com/joseluisq/macosx-sdks/releases/download/10.15/MacOSX10.15.sdk.tar.xz
-          mv MacOSX10.15.sdk.tar.xz tarballs/
-          UNATTENDED=yes OSX_VERSION_MIN=10.15 ./build.sh
-          echo "OSXCROSS_PATH=$(pwd)/target/bin" >> $GITHUB_ENV
-          echo "$(pwd)/target/bin" >> $GITHUB_PATH
       - name: Set cross compiler
         env:
           GOOS: ${{ matrix.goos }}
@@ -159,68 +158,71 @@ jobs:
           SYSROOT: ${{ env.SYSROOT || '' }}
         run: |
           set -e
-          case "${GOOS}-${GOARCH}" in
-            linux-arm)
-              if [ "${{ runner.arch }}" == "ARM64" ]; then
-                echo "CC=gcc" >> $GITHUB_ENV
-              else
-                echo "CC=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV
-              fi ;;
-            linux-arm64)
-              if [ "${{ runner.arch }}" == "ARM64" ]; then
-                echo "CC=gcc" >> $GITHUB_ENV
-              else
-                echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-              fi ;;
-            linux-riscv64)
-              echo "CC=riscv64-linux-gnu-gcc" >> $GITHUB_ENV ;;
-            linux-mips64)
-              echo "CC=mips64-linux-gnuabi64-gcc" >> $GITHUB_ENV ;;
-            linux-mips64le)
-              echo "CC=mips64el-linux-gnuabi64-gcc" >> $GITHUB_ENV ;;
-            linux-mipsle)
-              echo "CC=mipsel-linux-gnu-gcc" >> $GITHUB_ENV ;;
-            linux-mips)
-              echo "CC=mips-linux-gnu-gcc" >> $GITHUB_ENV ;;
-            linux-ppc64)
-              echo "CC=powerpc64-linux-gnu-gcc" >> $GITHUB_ENV ;;
-            linux-ppc64le)
-              echo "CC=powerpc64le-linux-gnu-gcc" >> $GITHUB_ENV ;;
-            freebsd-arm)
-              echo "CC=clang --target=armv7-unknown-freebsd --sysroot=${SYSROOT}" >> $GITHUB_ENV ;;
-            freebsd-arm64)
-              echo "CC=clang --target=aarch64-unknown-freebsd --sysroot=${SYSROOT}" >> $GITHUB_ENV ;;
-            freebsd-amd64)
-              echo "CC=clang --target=x86_64-unknown-freebsd --sysroot=${SYSROOT}" >> $GITHUB_ENV ;;
-            windows-amd64)
-              if [ "${{ runner.arch }}" == "ARM64" ]; then
-                echo "CGO_ENABLED=0" >> $GITHUB_ENV
-              else
-                echo "CC=x86_64-w64-mingw32-gcc" >> $GITHUB_ENV
-              fi ;;
-            windows-386)
-              if [ "${{ runner.arch }}" == "ARM64" ]; then
-                echo "CGO_ENABLED=0" >> $GITHUB_ENV
-              else
-                echo "CC=i686-w64-mingw32-gcc" >> $GITHUB_ENV
-              fi ;;
-            windows-arm|windows-arm64)
-              echo "CC=gcc" >> $GITHUB_ENV ;;
-            darwin-amd64)
-              echo "CC=o64-clang" >> $GITHUB_ENV
-              echo "CXX=o64-clang++" >> $GITHUB_ENV ;;
-            darwin-arm64)
-              echo "CC=oa64-clang" >> $GITHUB_ENV
-              echo "CXX=oa64-clang++" >> $GITHUB_ENV ;;
-            *)
-              echo "Using default system compiler for ${GOOS}-${GOARCH}" ;;
-          esac
+          if [ "$NEED_CGO" == "0" ]; then
+            echo "CGO_ENABLED=0" >> $GITHUB_ENV
+          else
+            echo "CGO_ENABLED=1" >> $GITHUB_ENV
+            case "${GOOS}-${GOARCH}" in
+              linux-arm)
+                if [ "${{ runner.arch }}" == "ARM64" ]; then
+                  echo "CC=gcc" >> $GITHUB_ENV
+                else
+                  echo "CC=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV
+                fi ;;
+              linux-arm64)
+                if [ "${{ runner.arch }}" == "ARM64" ]; then
+                  echo "CC=gcc" >> $GITHUB_ENV
+                else
+                  echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+                fi ;;
+              linux-riscv64)
+                echo "CC=riscv64-linux-gnu-gcc" >> $GITHUB_ENV ;;
+              linux-mips64)
+                echo "CC=mips64-linux-gnuabi64-gcc" >> $GITHUB_ENV ;;
+              linux-mips64le)
+                echo "CC=mips64el-linux-gnuabi64-gcc" >> $GITHUB_ENV ;;
+              linux-mipsle)
+                echo "CC=mipsel-linux-gnu-gcc" >> $GITHUB_ENV ;;
+              linux-mips)
+                echo "CC=mips-linux-gnu-gcc" >> $GITHUB_ENV ;;
+              linux-ppc64)
+                echo "CC=powerpc64-linux-gnu-gcc" >> $GITHUB_ENV ;;
+              linux-ppc64le)
+                echo "CC=powerpc64le-linux-gnu-gcc" >> $GITHUB_ENV ;;
+              freebsd-arm)
+                echo "CC=clang --target=armv7-unknown-freebsd --sysroot=${SYSROOT}" >> $GITHUB_ENV ;;
+              freebsd-arm64)
+                echo "CC=clang --target=aarch64-unknown-freebsd --sysroot=${SYSROOT}" >> $GITHUB_ENV ;;
+              freebsd-amd64)
+                echo "CC=clang --target=x86_64-unknown-freebsd --sysroot=${SYSROOT}" >> $GITHUB_ENV ;;
+              windows-amd64)
+                if [ "${{ runner.arch }}" == "ARM64" ]; then
+                  echo "CGO_ENABLED=0" >> $GITHUB_ENV
+                else
+                  echo "CC=x86_64-w64-mingw32-gcc" >> $GITHUB_ENV
+                fi ;;
+              windows-386)
+                if [ "${{ runner.arch }}" == "ARM64" ]; then
+                  echo "CGO_ENABLED=0" >> $GITHUB_ENV
+                else
+                  echo "CC=i686-w64-mingw32-gcc" >> $GITHUB_ENV
+                fi ;;
+              darwin-amd64)
+                echo "CC=o64-clang" >> $GITHUB_ENV
+                echo "CXX=o64-clang++" >> $GITHUB_ENV ;;
+              darwin-arm64)
+                echo "CC=oa64-clang" >> $GITHUB_ENV
+                echo "CXX=oa64-clang++" >> $GITHUB_ENV ;;
+              *)
+                echo "Using default system compiler for ${GOOS}-${GOARCH}" ;;
+            esac
+          fi
       - name: Build Binary
         env:
           GOARM: ${{ matrix.goarm || '' }}
           CC: ${{ env.CC }}
           CXX: ${{ env.CXX }}
-          CGO_ENABLED: ${{ env.CGO_ENABLED || '1' }}
+          CGO_ENABLED: ${{ env.CGO_ENABLED }}
         run: |
           mkdir -p bin
           cd cmd
