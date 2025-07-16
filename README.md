@@ -70,7 +70,7 @@ rm -rf /usr/bin/cputest
 ## 在Golang中使用
 
 ```
-go get github.com/oneclickvirt/cputest@v0.0.11-20250716030723
+go get github.com/oneclickvirt/cputest@v0.0.11-20250716031513
 ```
 
 # 额外环境安装(非必须)
