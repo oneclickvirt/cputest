@@ -1,4 +1,5 @@
-//go:build (386 || arm) && !((freebsd || openbsd || netbsd || darwin) && (386 || arm)) && !(windows && arm) && !(linux && arm)
+//go:build (386 && linux) || (windows && arm)
+
 package cpu
 
 // #cgo CFLAGS: -std=c11
@@ -6,25 +7,8 @@ package cpu
 // #include "cpu_benchmark.h"
 import "C"
 import (
-	"time"
 	"unsafe"
 )
-
-type Config struct {
-	MaxPrime   int
-	Duration   time.Duration
-	NumThreads int
-	MaxEvents  int
-}
-
-func DefaultConfig() Config {
-	return Config{
-		MaxPrime:   10000,
-		Duration:   5 * time.Second,
-		NumThreads: 1,
-		MaxEvents:  1000000,
-	}
-}
 
 func RunBenchmark(config Config) (uint64, float64, []float64) {
 	cConfig := C.Config{

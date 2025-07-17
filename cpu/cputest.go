@@ -25,6 +25,22 @@ func logError(message string, err error) {
 	}
 }
 
+type Config struct {
+	MaxPrime   int
+	Duration   time.Duration
+	NumThreads int
+	MaxEvents  int
+}
+
+func DefaultConfig() Config {
+	return Config{
+		MaxPrime:   10000,
+		Duration:   5 * time.Second,
+		NumThreads: 1,
+		MaxEvents:  1000000,
+	}
+}
+
 // SysBenchTest 基于sysbench测试
 func SysBenchTest(language, testThread string) string {
 	if model.EnableLoger {

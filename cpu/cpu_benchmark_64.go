@@ -1,4 +1,4 @@
-//go:build (amd64 || arm64 || riscv64 || mips64 || mips64le || ppc64le) && !((freebsd || openbsd || netbsd) && (amd64 || arm64)) && !(windows && arm64) && !(linux && arm)
+//go:build (amd64 || arm64 || riscv64 || mips64 || mips64le || ppc64le) && !(windows && arm64) && (linux || windows)
 
 package cpu
 
@@ -7,25 +7,8 @@ package cpu
 // #include "cpu_benchmark.h"
 import "C"
 import (
-	"time"
 	"unsafe"
 )
-
-type Config struct {
-	MaxPrime   int
-	Duration   time.Duration
-	NumThreads int
-	MaxEvents  int
-}
-
-func DefaultConfig() Config {
-	return Config{
-		MaxPrime:   10000,
-		Duration:   5 * time.Second,
-		NumThreads: 1,
-		MaxEvents:  1000000,
-	}
-}
 
 func RunBenchmark(config Config) (uint64, float64, []float64) {
 	cConfig := C.Config{
