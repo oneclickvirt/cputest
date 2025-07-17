@@ -1,4 +1,5 @@
-//go:build (ppc64 || mips || mipsle || s390x) && linux
+//go:build !(linux || freebsd || darwin || openbsd || windows)
+// +build !linux,!freebsd,!darwin,!openbsd,!windows
 
 package cpu
 

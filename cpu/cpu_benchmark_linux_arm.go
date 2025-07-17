@@ -1,4 +1,4 @@
-//go:build (ppc64 || mips || mipsle || s390x) && linux
+//go:build linux && arm
 
 package cpu
 

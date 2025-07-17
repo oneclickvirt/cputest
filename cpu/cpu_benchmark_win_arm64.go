@@ -1,4 +1,4 @@
-//go:build (ppc64 || mips || mipsle || s390x) && linux
+//go:build windows && arm64
 
 package cpu
 
@@ -74,3 +74,4 @@ func RunBenchmark(config Config) (uint64, float64, []float64) {
 	eventsPerSecond := float64(counter) / duration
 	return counter, eventsPerSecond, latencies
 }
+

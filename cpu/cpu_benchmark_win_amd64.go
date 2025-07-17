@@ -1,4 +1,4 @@
-//go:build (386 && linux) || (windows && arm)
+//go:build windows && amd64
 
 package cpu
 
@@ -26,12 +26,12 @@ func RunBenchmark(config Config) (uint64, float64, []float64) {
 	eventsPerSecond := float64(cResult.events_per_second)
 	latencies := make([]float64, int(cResult.latency_count))
 	if cResult.latency_count > 0 {
-		const maxArraySize = 1 << 20
+		const maxArraySize = 1 << 28
 		arraySize := int(cResult.latency_count)
 		if arraySize > maxArraySize {
 			arraySize = maxArraySize
 		}
-		cLatencies := (*[1 << 20]C.double)(unsafe.Pointer(cResult.latencies))[:arraySize:arraySize]
+		cLatencies := (*[1 << 28]C.double)(unsafe.Pointer(cResult.latencies))[:arraySize:arraySize]
 		copyCount := int(cResult.latency_count)
 		if copyCount > len(cLatencies) {
 			copyCount = len(cLatencies)
