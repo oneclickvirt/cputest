@@ -1,4 +1,10 @@
-//go:build (amd64 || arm64 || riscv64 || mips64 || mips64le || ppc64le || (darwin && (amd64 || arm64))) && !((freebsd || openbsd || netbsd) && (amd64 || arm64)) && !(windows && arm64) && !(linux && arm)
+//go:build (
+//     ((linux || windows) && (amd64 || arm64 || riscv64 || mips64 || mips64le || ppc64le)) ||
+//     (darwin && (amd64 || arm64))
+//   ) &&
+//   !( (freebsd || openbsd || netbsd) && (amd64 || arm64) ) &&
+//   !(windows && arm64) &&
+//   !(linux && arm)
 package cpu
 
 // #cgo CFLAGS: -std=c11
