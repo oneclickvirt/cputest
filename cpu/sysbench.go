@@ -1,4 +1,4 @@
-//go:build windows && 386
+//go:build ppc64 || mips || mipsle || s390x || (windows && (arm || arm64)) || ((freebsd || openbsd || netbsd || darwin) && (386 || amd64 || arm || arm64)) || (linux && arm)
 
 package cpu
 
@@ -8,6 +8,22 @@ import (
 	"sync/atomic"
 	"time"
 )
+
+type Config struct {
+	MaxPrime   int
+	Duration   time.Duration
+	NumThreads int
+	MaxEvents  int
+}
+
+func DefaultConfig() Config {
+	return Config{
+		MaxPrime:   10000,
+		Duration:   5 * time.Second,
+		NumThreads: 1,
+		MaxEvents:  1000000,
+	}
+}
 
 // 完全按照 sysbench 的实现来验证质数 见 https://github.com/akopytov/sysbench/blob/master/src/tests/cpu/sb_cpu.c
 func verifyPrimes(maxPrime int) uint64 {

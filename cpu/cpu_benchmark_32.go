@@ -1,4 +1,4 @@
-//go:build linux && amd64
+//go:build (386 || arm) && !((freebsd || openbsd || netbsd || darwin) && (386 || arm)) && !(windows && arm) && !(linux && arm)
 
 package cpu
 
@@ -7,8 +7,25 @@ package cpu
 // #include "cpu_benchmark.h"
 import "C"
 import (
+	"time"
 	"unsafe"
 )
+
+type Config struct {
+	MaxPrime   int
+	Duration   time.Duration
+	NumThreads int
+	MaxEvents  int
+}
+
+func DefaultConfig() Config {
+	return Config{
+		MaxPrime:   10000,
+		Duration:   5 * time.Second,
+		NumThreads: 1,
+		MaxEvents:  1000000,
+	}
+}
 
 func RunBenchmark(config Config) (uint64, float64, []float64) {
 	cConfig := C.Config{
@@ -26,12 +43,12 @@ func RunBenchmark(config Config) (uint64, float64, []float64) {
 	eventsPerSecond := float64(cResult.events_per_second)
 	latencies := make([]float64, int(cResult.latency_count))
 	if cResult.latency_count > 0 {
-		const maxArraySize = 1 << 28
+		const maxArraySize = 1 << 20
 		arraySize := int(cResult.latency_count)
 		if arraySize > maxArraySize {
 			arraySize = maxArraySize
 		}
-		cLatencies := (*[1 << 28]C.double)(unsafe.Pointer(cResult.latencies))[:arraySize:arraySize]
+		cLatencies := (*[1 << 20]C.double)(unsafe.Pointer(cResult.latencies))[:arraySize:arraySize]
 		copyCount := int(cResult.latency_count)
 		if copyCount > len(cLatencies) {
 			copyCount = len(cLatencies)
