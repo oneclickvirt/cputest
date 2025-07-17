@@ -1,4 +1,4 @@
-//go:build !(linux || freebsd || darwin || openbsd || windows || ppc64 || mips || mipsle || s390x)
+//go:build !(linux || freebsd || darwin || openbsd || netbsd || windows || ppc64 || mips || mipsle || s390x)
 
 package cpu
 
