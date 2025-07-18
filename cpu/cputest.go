@@ -85,7 +85,7 @@ func runInternalBenchmark(language, testThread string) string {
 	config := DefaultConfig()
 	result := ""
 	// 单线程测试
-	if testThread == "single" {
+	if testThread == "single" || testThread == "multi" {
 		config.NumThreads = 1
 		var singleThreadScore float64
 		if runtime.GOOS == "windows" || (runtime.GOOS == "linux" && runtime.GOARCH == "arm") {
