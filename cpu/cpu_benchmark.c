@@ -5,109 +5,69 @@
 #include <time.h>
 #include <stdatomic.h>
 #include <stdint.h>
-
 #ifdef _WIN32
 #include <windows.h>
 #include <process.h>
-
-void portable_sleep_ms(int milliseconds)
-{
+void portable_sleep_ms(int milliseconds) {
     Sleep(milliseconds);
 }
-
-typedef struct
-{
+typedef struct {
     LARGE_INTEGER frequency;
     LARGE_INTEGER start;
 } win_timer_t;
-
 static win_timer_t win_timer;
 static int win_timer_initialized = 0;
-
-void win_timer_init()
-{
-    if (!win_timer_initialized)
-    {
+void win_timer_init() {
+    if (!win_timer_initialized) {
         QueryPerformanceFrequency(&win_timer.frequency);
         win_timer_initialized = 1;
     }
 }
-
-void win_clock_gettime(struct timespec *ts)
-{
+void win_clock_gettime(struct timespec *ts) {
     LARGE_INTEGER counter;
     QueryPerformanceCounter(&counter);
     long long nanoseconds = (counter.QuadPart * 1000000000LL) / win_timer.frequency.QuadPart;
     ts->tv_sec = nanoseconds / 1000000000LL;
     ts->tv_nsec = nanoseconds % 1000000000LL;
 }
-
-typedef struct
-{
+typedef struct {
     HANDLE handle;
     void *(*start_routine)(void *);
     void *arg;
     void *result;
-    int thread_id;
 } win_thread_t;
-
 typedef CRITICAL_SECTION win_mutex_t;
-
-static DWORD WINAPI win_thread_proc(LPVOID lpParam)
-{
+static DWORD WINAPI win_thread_proc(LPVOID lpParam) {
     win_thread_t *thread = (win_thread_t *)lpParam;
     thread->result = thread->start_routine(thread->arg);
     return 0;
 }
-
-int win_thread_create(win_thread_t *thread, void *(*start_routine)(void *), void *arg)
-{
+int win_thread_create(win_thread_t *thread, void *(*start_routine)(void *), void *arg) {
     thread->start_routine = start_routine;
     thread->arg = arg;
     thread->handle = CreateThread(NULL, 0, win_thread_proc, thread, 0, NULL);
     return thread->handle ? 0 : -1;
 }
-
-int win_thread_join(win_thread_t *thread, void **retval)
-{
+int win_thread_join(win_thread_t *thread, void **retval) {
     WaitForSingleObject(thread->handle, INFINITE);
-    if (retval)
-    {
+    if (retval) {
         *retval = thread->result;
     }
     CloseHandle(thread->handle);
     return 0;
 }
-
-void win_mutex_init(win_mutex_t *mutex)
-{
+void win_mutex_init(win_mutex_t *mutex) {
     InitializeCriticalSection(mutex);
 }
-
-void win_mutex_lock(win_mutex_t *mutex)
-{
+void win_mutex_lock(win_mutex_t *mutex) {
     EnterCriticalSection(mutex);
 }
-
-void win_mutex_unlock(win_mutex_t *mutex)
-{
+void win_mutex_unlock(win_mutex_t *mutex) {
     LeaveCriticalSection(mutex);
 }
-
-void win_mutex_destroy(win_mutex_t *mutex)
-{
+void win_mutex_destroy(win_mutex_t *mutex) {
     DeleteCriticalSection(mutex);
 }
-
-void win_set_thread_affinity(win_thread_t *thread, int cpu_id)
-{
-    if (thread->handle)
-    {
-        DWORD_PTR mask = 1ULL << cpu_id;
-        SetThreadAffinityMask(thread->handle, mask);
-    }
-}
-
 #define pthread_t win_thread_t
 #define pthread_mutex_t win_mutex_t
 #define pthread_create(thread, attr, start_routine, arg) win_thread_create(thread, start_routine, arg)
@@ -119,50 +79,19 @@ void win_set_thread_affinity(win_thread_t *thread, int cpu_id)
 #define PTHREAD_MUTEX_INITIALIZER {0}
 #define clock_gettime(clk_id, tp) win_clock_gettime(tp)
 #define CLOCK_MONOTONIC 0
-
 #else
 #include <pthread.h>
 #include <unistd.h>
-
-#ifdef __APPLE__
-#include <mach/thread_policy.h>
-#include <mach/thread_act.h>
-#include <sys/sysctl.h>
-#endif
-
-#ifdef __linux__
-#include <sched.h>
-#endif
-
 extern int usleep(useconds_t __useconds);
-
-void portable_sleep_ms(int milliseconds)
-{
+void portable_sleep_ms(int milliseconds) {
     usleep(milliseconds * 1000);
 }
-
-void unix_set_thread_affinity(pthread_t thread, int cpu_id)
-{
-#ifdef __linux__
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    CPU_SET(cpu_id, &cpuset);
-    pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
-#elif defined(__APPLE__)
-    thread_affinity_policy_data_t policy = {cpu_id};
-    thread_policy_set(pthread_mach_thread_np(thread), THREAD_AFFINITY_POLICY,
-                      (thread_policy_t)&policy, 1);
 #endif
-}
-
-#endif
-
 #if defined(__LP64__) || defined(_WIN64) || (defined(__WORDSIZE) && __WORDSIZE == 64) || defined(__x86_64__) || defined(__amd64__) || defined(__aarch64__)
-#define MAX_LATENCY_SAMPLES 100000000 // 100M samples
+    #define MAX_LATENCY_SAMPLES 100000000  // 100M samples
 #else
-#define MAX_LATENCY_SAMPLES 1000000 // 1M samples
+    #define MAX_LATENCY_SAMPLES 1000000    // 1M samples
 #endif
-
 typedef struct
 {
     int max_prime;
@@ -170,7 +99,6 @@ typedef struct
     int num_threads;
     int max_events;
 } Config;
-
 typedef struct
 {
     Config config;
@@ -180,9 +108,7 @@ typedef struct
     int *latency_count;
     int latency_capacity;
     pthread_mutex_t *latency_mutex;
-    int thread_id;
 } WorkerArgs;
-
 typedef struct
 {
     uint64_t total_events;
@@ -190,7 +116,6 @@ typedef struct
     double *latencies;
     int latency_count;
 } BenchmarkResult;
-
 static uint64_t verify_primes(int max_prime)
 {
     uint64_t n = 0;
@@ -213,22 +138,11 @@ static uint64_t verify_primes(int max_prime)
     }
     return n;
 }
-
 static void *worker(void *arg)
 {
     WorkerArgs *args = (WorkerArgs *)arg;
-    int single_core_mode = (args->config.num_threads == 1);
 #ifdef _WIN32
     win_timer_init();
-    if (single_core_mode)
-    {
-        win_set_thread_affinity((win_thread_t *)pthread_self(), 0);
-    }
-#else
-    if (single_core_mode)
-    {
-        unix_set_thread_affinity(pthread_self(), 0);
-    }
 #endif
     while (atomic_load(args->counter) < (uint64_t)args->config.max_events)
     {
@@ -253,10 +167,8 @@ static void *worker(void *arg)
     }
     return NULL;
 }
-
 BenchmarkResult *run_benchmark(Config config)
 {
-    int single_core_mode = (config.num_threads == 1);
 #ifdef _WIN32
     win_timer_init();
 #endif
@@ -264,18 +176,15 @@ BenchmarkResult *run_benchmark(Config config)
     int done = 0;
     int latency_count = 0;
     int latency_capacity = config.max_events;
-    if (latency_capacity > MAX_LATENCY_SAMPLES)
-    {
+    if (latency_capacity > MAX_LATENCY_SAMPLES) {
         latency_capacity = MAX_LATENCY_SAMPLES;
     }
     size_t required_bytes = (size_t)latency_capacity * sizeof(double);
     size_t max_safe_bytes = SIZE_MAX / 4;
-    if (required_bytes > max_safe_bytes)
-    {
+    if (required_bytes > max_safe_bytes) {
         latency_capacity = (int)(max_safe_bytes / sizeof(double));
     }
-    if (latency_capacity < 1000)
-    {
+    if (latency_capacity < 1000) {
         latency_capacity = 1000;
     }
     double *latencies = (double *)malloc(latency_capacity * sizeof(double));
@@ -307,16 +216,7 @@ BenchmarkResult *run_benchmark(Config config)
         worker_args[i].latency_count = &latency_count;
         worker_args[i].latency_capacity = latency_capacity;
         worker_args[i].latency_mutex = &latency_mutex;
-        worker_args[i].thread_id = i;
         pthread_create(&threads[i], NULL, worker, &worker_args[i]);
-        if (single_core_mode)
-        {
-#ifdef _WIN32
-            win_set_thread_affinity(&threads[i], 0);
-#else
-            unix_set_thread_affinity(threads[i], 0);
-#endif
-        }
     }
     portable_sleep_ms(config.duration_ms);
     done = 1;
@@ -344,7 +244,6 @@ BenchmarkResult *run_benchmark(Config config)
     pthread_mutex_destroy(&latency_mutex);
     return result;
 }
-
 void free_benchmark_result(BenchmarkResult *result)
 {
     if (result)

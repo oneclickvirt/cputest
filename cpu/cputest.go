@@ -85,7 +85,7 @@ func runInternalBenchmark(language, testThread string) string {
 	config := DefaultConfig()
 	result := ""
 	// 单线程测试
-	if testThread == "single" || testThread == "multi" {
+	if testThread == "single" || testThread != "multi" {
 		config.NumThreads = 1
 		_, singleThreadScore, _ := RunBenchmark(config)
 		result += formatScoreOutput(language, 1, fmt.Sprintf("%.2f", singleThreadScore))
