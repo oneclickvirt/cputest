@@ -88,8 +88,8 @@ func runInternalBenchmark(language, testThread string) string {
 	if testThread == "single" {
 		config.NumThreads = 1
 		var singleThreadScore float64
-		if runtime.GOOS == "windows" {
-			_, singleThreadScore, _ = RunBenchmarkWin(config)
+		if runtime.GOOS == "windows" || (runtime.GOOS == "linux" && runtime.GOARCH == "arm") {
+			_, singleThreadScore, _ = RunBenchmarkCustom(config)
 		} else {
 			_, singleThreadScore, _ = RunBenchmark(config)
 		}
@@ -100,8 +100,8 @@ func runInternalBenchmark(language, testThread string) string {
 		time.Sleep(1 * time.Second)
 		config.NumThreads = runtime.NumCPU()
 		var multiThreadScore float64
-		if runtime.GOOS == "windows" {
-			_, multiThreadScore, _ = RunBenchmarkWin(config)
+		if runtime.GOOS == "windows" || (runtime.GOOS == "linux" && runtime.GOARCH == "arm") {
+			_, multiThreadScore, _ = RunBenchmarkCustom(config)
 		} else {
 			_, multiThreadScore, _ = RunBenchmark(config)
 		}
