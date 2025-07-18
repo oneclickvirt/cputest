@@ -11,22 +11,6 @@ import (
 	"unsafe"
 )
 
-type Config struct {
-	MaxPrime   int
-	Duration   time.Duration
-	NumThreads int
-	MaxEvents  int
-}
-
-func DefaultConfig() Config {
-	return Config{
-		MaxPrime:   10000,
-		Duration:   5 * time.Second,
-		NumThreads: 1,
-		MaxEvents:  1000000,
-	}
-}
-
 func RunBenchmark(config Config) (uint64, float64, []float64) {
 	cConfig := C.Config{
 		max_prime:   C.int(config.MaxPrime),

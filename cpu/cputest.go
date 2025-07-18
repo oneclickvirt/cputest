@@ -18,6 +18,22 @@ import (
 	. "github.com/oneclickvirt/defaultset"
 )
 
+type Config struct {
+	MaxPrime   int
+	Duration   time.Duration
+	NumThreads int
+	MaxEvents  int
+}
+
+func DefaultConfig() Config {
+	return Config{
+		MaxPrime:   10000,
+		Duration:   5 * time.Second,
+		NumThreads: 1,
+		MaxEvents:  1000000,
+	}
+}
+
 // logError 记录错误日志
 func logError(message string, err error) {
 	if model.EnableLoger {

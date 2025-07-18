@@ -9,22 +9,6 @@ import (
 	"time"
 )
 
-type Config struct {
-	MaxPrime   int
-	Duration   time.Duration
-	NumThreads int
-	MaxEvents  int
-}
-
-func DefaultConfig() Config {
-	return Config{
-		MaxPrime:   10000,
-		Duration:   5 * time.Second,
-		NumThreads: 1,
-		MaxEvents:  1000000,
-	}
-}
-
 // 完全按照 sysbench 的实现来验证质数 见 https://github.com/akopytov/sysbench/blob/master/src/tests/cpu/sb_cpu.c
 func verifyPrimes(maxPrime int) uint64 {
 	var n uint64 = 0
