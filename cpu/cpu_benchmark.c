@@ -22,7 +22,7 @@ typedef struct
 } win_timer_t;
 
 static win_timer_t win_timer;
-static volatile int win_timer_initialized = 0;
+static int win_timer_initialized = 0;
 
 void win_timer_init()
 {
@@ -48,13 +48,10 @@ typedef struct
     void *(*start_routine)(void *);
     void *arg;
     void *result;
+    int thread_id;
 } win_thread_t;
 
-typedef struct
-{
-    CRITICAL_SECTION cs;
-    int initialized;
-} win_mutex_t;
+typedef CRITICAL_SECTION win_mutex_t;
 
 static DWORD WINAPI win_thread_proc(LPVOID lpParam)
 {
@@ -67,57 +64,47 @@ int win_thread_create(win_thread_t *thread, void *(*start_routine)(void *), void
 {
     thread->start_routine = start_routine;
     thread->arg = arg;
-    thread->result = NULL;
     thread->handle = CreateThread(NULL, 0, win_thread_proc, thread, 0, NULL);
     return thread->handle ? 0 : -1;
 }
 
 int win_thread_join(win_thread_t *thread, void **retval)
 {
-    if (thread->handle)
+    WaitForSingleObject(thread->handle, INFINITE);
+    if (retval)
     {
-        WaitForSingleObject(thread->handle, INFINITE);
-        if (retval)
-        {
-            *retval = thread->result;
-        }
-        CloseHandle(thread->handle);
-        thread->handle = NULL;
+        *retval = thread->result;
     }
+    CloseHandle(thread->handle);
     return 0;
 }
 
 void win_mutex_init(win_mutex_t *mutex)
 {
-    if (!mutex->initialized)
-    {
-        InitializeCriticalSection(&mutex->cs);
-        mutex->initialized = 1;
-    }
+    InitializeCriticalSection(mutex);
 }
 
 void win_mutex_lock(win_mutex_t *mutex)
 {
-    if (mutex->initialized)
-    {
-        EnterCriticalSection(&mutex->cs);
-    }
+    EnterCriticalSection(mutex);
 }
 
 void win_mutex_unlock(win_mutex_t *mutex)
 {
-    if (mutex->initialized)
-    {
-        LeaveCriticalSection(&mutex->cs);
-    }
+    LeaveCriticalSection(mutex);
 }
 
 void win_mutex_destroy(win_mutex_t *mutex)
 {
-    if (mutex->initialized)
+    DeleteCriticalSection(mutex);
+}
+
+void win_set_thread_affinity(win_thread_t *thread, int cpu_id)
+{
+    if (thread->handle)
     {
-        DeleteCriticalSection(&mutex->cs);
-        mutex->initialized = 0;
+        DWORD_PTR mask = 1ULL << cpu_id;
+        SetThreadAffinityMask(thread->handle, mask);
     }
 }
 
@@ -129,7 +116,7 @@ void win_mutex_destroy(win_mutex_t *mutex)
 #define pthread_mutex_lock(mutex) win_mutex_lock(mutex)
 #define pthread_mutex_unlock(mutex) win_mutex_unlock(mutex)
 #define pthread_mutex_destroy(mutex) win_mutex_destroy(mutex)
-#define PTHREAD_MUTEX_INITIALIZER {{0}, 0}
+#define PTHREAD_MUTEX_INITIALIZER {0}
 #define clock_gettime(clk_id, tp) win_clock_gettime(tp)
 #define CLOCK_MONOTONIC 0
 
@@ -137,12 +124,37 @@ void win_mutex_destroy(win_mutex_t *mutex)
 #include <pthread.h>
 #include <unistd.h>
 
+#ifdef __APPLE__
+#include <mach/thread_policy.h>
+#include <mach/thread_act.h>
+#include <sys/sysctl.h>
+#endif
+
+#ifdef __linux__
+#include <sched.h>
+#endif
+
 extern int usleep(useconds_t __useconds);
 
 void portable_sleep_ms(int milliseconds)
 {
     usleep(milliseconds * 1000);
 }
+
+void unix_set_thread_affinity(pthread_t thread, int cpu_id)
+{
+#ifdef __linux__
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(cpu_id, &cpuset);
+    pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
+#elif defined(__APPLE__)
+    thread_affinity_policy_data_t policy = {cpu_id};
+    thread_policy_set(pthread_mach_thread_np(thread), THREAD_AFFINITY_POLICY,
+                      (thread_policy_t)&policy, 1);
+#endif
+}
+
 #endif
 
 #if defined(__LP64__) || defined(_WIN64) || (defined(__WORDSIZE) && __WORDSIZE == 64) || defined(__x86_64__) || defined(__amd64__) || defined(__aarch64__)
@@ -162,12 +174,13 @@ typedef struct
 typedef struct
 {
     Config config;
-    _Alignas(64) atomic_uint_fast64_t *counter; // 确保缓存行对齐
-    _Alignas(64) volatile int *done;            // 确保缓存行对齐
+    atomic_uint_fast64_t *counter;
+    int *done;
     double *latencies;
-    volatile int *latency_count;
+    int *latency_count;
     int latency_capacity;
     pthread_mutex_t *latency_mutex;
+    int thread_id;
 } WorkerArgs;
 
 typedef struct
@@ -204,25 +217,31 @@ static uint64_t verify_primes(int max_prime)
 static void *worker(void *arg)
 {
     WorkerArgs *args = (WorkerArgs *)arg;
+    int single_core_mode = (args->config.num_threads == 1);
 #ifdef _WIN32
     win_timer_init();
+    if (single_core_mode)
+    {
+        win_set_thread_affinity((win_thread_t *)pthread_self(), 0);
+    }
+#else
+    if (single_core_mode)
+    {
+        unix_set_thread_affinity(pthread_self(), 0);
+    }
 #endif
-
-    while (atomic_load_explicit(args->counter, memory_order_relaxed) < (uint64_t)args->config.max_events)
+    while (atomic_load(args->counter) < (uint64_t)args->config.max_events)
     {
         if (*args->done)
         {
             break;
         }
-
         struct timespec start, end;
         clock_gettime(CLOCK_MONOTONIC, &start);
         verify_primes(args->config.max_prime);
         clock_gettime(CLOCK_MONOTONIC, &end);
-
         double duration = (end.tv_sec - start.tv_sec) * 1000.0 +
                           (end.tv_nsec - start.tv_nsec) / 1000000.0;
-
         pthread_mutex_lock(args->latency_mutex);
         if (*args->latency_count < args->latency_capacity)
         {
@@ -230,68 +249,55 @@ static void *worker(void *arg)
             (*args->latency_count)++;
         }
         pthread_mutex_unlock(args->latency_mutex);
-
-        atomic_fetch_add_explicit(args->counter, 1, memory_order_relaxed);
+        atomic_fetch_add(args->counter, 1);
     }
     return NULL;
 }
 
 BenchmarkResult *run_benchmark(Config config)
 {
+    int single_core_mode = (config.num_threads == 1);
 #ifdef _WIN32
     win_timer_init();
 #endif
-
-    // 使用对齐的内存分配
-    _Alignas(64) atomic_uint_fast64_t counter = 0;
-    _Alignas(64) volatile int done = 0;
-    volatile int latency_count = 0;
+    atomic_uint_fast64_t counter = 0;
+    int done = 0;
+    int latency_count = 0;
     int latency_capacity = config.max_events;
-
     if (latency_capacity > MAX_LATENCY_SAMPLES)
     {
         latency_capacity = MAX_LATENCY_SAMPLES;
     }
-
     size_t required_bytes = (size_t)latency_capacity * sizeof(double);
     size_t max_safe_bytes = SIZE_MAX / 4;
-
     if (required_bytes > max_safe_bytes)
     {
         latency_capacity = (int)(max_safe_bytes / sizeof(double));
     }
-
     if (latency_capacity < 1000)
     {
         latency_capacity = 1000;
     }
-
     double *latencies = (double *)malloc(latency_capacity * sizeof(double));
     pthread_mutex_t latency_mutex = PTHREAD_MUTEX_INITIALIZER;
-
+#ifdef _WIN32
     pthread_mutex_init(&latency_mutex, NULL);
-
+#endif
     if (!latencies)
     {
-        pthread_mutex_destroy(&latency_mutex);
         return NULL;
     }
-
     pthread_t *threads = (pthread_t *)malloc(config.num_threads * sizeof(pthread_t));
     WorkerArgs *worker_args = (WorkerArgs *)malloc(config.num_threads * sizeof(WorkerArgs));
-
     if (!threads || !worker_args)
     {
         free(latencies);
         free(threads);
         free(worker_args);
-        pthread_mutex_destroy(&latency_mutex);
         return NULL;
     }
-
     struct timespec start_time, end_time;
     clock_gettime(CLOCK_MONOTONIC, &start_time);
-
     for (int i = 0; i < config.num_threads; i++)
     {
         worker_args[i].config = config;
@@ -301,61 +307,41 @@ BenchmarkResult *run_benchmark(Config config)
         worker_args[i].latency_count = &latency_count;
         worker_args[i].latency_capacity = latency_capacity;
         worker_args[i].latency_mutex = &latency_mutex;
-
-        if (pthread_create(&threads[i], NULL, worker, &worker_args[i]) != 0)
+        worker_args[i].thread_id = i;
+        pthread_create(&threads[i], NULL, worker, &worker_args[i]);
+        if (single_core_mode)
         {
-            // 创建线程失败，等待已创建的线程
-            done = 1;
-            for (int j = 0; j < i; j++)
-            {
-                pthread_join(threads[j], NULL);
-            }
-            free(latencies);
-            free(threads);
-            free(worker_args);
-            pthread_mutex_destroy(&latency_mutex);
-            return NULL;
+#ifdef _WIN32
+            win_set_thread_affinity(&threads[i], 0);
+#else
+            unix_set_thread_affinity(threads[i], 0);
+#endif
         }
     }
-
     portable_sleep_ms(config.duration_ms);
     done = 1;
-
-// 确保所有线程都能看到done的变化
-#ifdef _WIN32
-    MemoryBarrier();
-#else
-    __sync_synchronize();
-#endif
-
     for (int i = 0; i < config.num_threads; i++)
     {
         pthread_join(threads[i], NULL);
     }
-
     clock_gettime(CLOCK_MONOTONIC, &end_time);
     double duration = (end_time.tv_sec - start_time.tv_sec) +
                       (end_time.tv_nsec - start_time.tv_nsec) / 1000000000.0;
-
     BenchmarkResult *result = (BenchmarkResult *)malloc(sizeof(BenchmarkResult));
     if (!result)
     {
         free(latencies);
         free(threads);
         free(worker_args);
-        pthread_mutex_destroy(&latency_mutex);
         return NULL;
     }
-
-    result->total_events = atomic_load_explicit(&counter, memory_order_acquire);
+    result->total_events = atomic_load(&counter);
     result->events_per_second = (double)result->total_events / duration;
     result->latencies = latencies;
     result->latency_count = latency_count;
-
     free(threads);
     free(worker_args);
     pthread_mutex_destroy(&latency_mutex);
-
     return result;
 }
 
