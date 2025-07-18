@@ -88,6 +88,9 @@ func runInternalBenchmark(language, testThread string) string {
 	if testThread == "single" || testThread != "multi" {
 		config.NumThreads = 1
 		_, singleThreadScore, _ := RunBenchmark(config)
+		if runtime.GOOS == "windows" && runtime.NumCPU() > 1 {
+			singleThreadScore = singleThreadScore / float64(runtime.NumCPU())
+		}
 		result += formatScoreOutput(language, 1, fmt.Sprintf("%.2f", singleThreadScore))
 	}
 	// 多线程测试（如果需要且是多核系统）
@@ -297,11 +300,11 @@ func WinsatTest(language, testThread string) string {
 	var result string
 	cmd1 := exec.Command("winsat", "cpu", "-encryption") // winsat cpu -encryption
 	output1, err1 := cmd1.Output()
-	if err1 != nil { // 命令不存在时使用原生实现的sysbench
+	if err1 != nil {
 		logError("winsat cpu encryption error: ", err1)
 		return runInternalBenchmark(language, testThread)
 	} else if strings.Contains(strings.ToLower(string(output1)), "error") ||
-		strings.Contains(string(output1), "错误") { // 命令报错时使用原生实现的sysbench
+		strings.Contains(string(output1), "错误") {
 		return runInternalBenchmark(language, testThread)
 	} else {
 		tempList := strings.Split(string(output1), "\n")
