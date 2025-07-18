@@ -88,9 +88,9 @@ func runInternalBenchmark(language, testThread string) string {
 	if testThread == "single" || testThread != "multi" {
 		config.NumThreads = 1
 		_, singleThreadScore, _ := RunBenchmark(config)
-		if runtime.GOOS == "windows" && runtime.NumCPU() > 1 {
-			singleThreadScore = singleThreadScore / float64(runtime.NumCPU())
-		}
+		// if runtime.GOOS == "windows" && runtime.NumCPU() > 1 {
+		// 	singleThreadScore = singleThreadScore / float64(runtime.NumCPU())
+		// }
 		result += formatScoreOutput(language, 1, fmt.Sprintf("%.2f", singleThreadScore))
 	}
 	// 多线程测试（如果需要且是多核系统）
