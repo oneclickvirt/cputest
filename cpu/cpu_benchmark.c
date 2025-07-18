@@ -1,3 +1,4 @@
+//go:build ignore !(linux || freebsd || darwin || openbsd || netbsd || windows || ppc64 || mips || mipsle || s390x) || ppc64 || mips || mipsle || s390x || (windows && (arm || arm64 || amd64 || 386)) || ((freebsd || openbsd || netbsd || darwin) && (386 || amd64 || arm || arm64)) || (linux && arm)
 #define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
