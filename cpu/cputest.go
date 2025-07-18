@@ -85,19 +85,26 @@ func runInternalBenchmark(language, testThread string) string {
 	config := DefaultConfig()
 	result := ""
 	// 单线程测试
-	if testThread == "single" || testThread != "multi" {
+	if testThread == "single" {
 		config.NumThreads = 1
-		_, singleThreadScore, _ := RunBenchmark(config)
-		// if runtime.GOOS == "windows" && runtime.NumCPU() > 1 {
-		// 	singleThreadScore = singleThreadScore / float64(runtime.NumCPU())
-		// }
+		var singleThreadScore float64
+		if runtime.GOOS == "windows" {
+			_, singleThreadScore, _ = RunBenchmarkWin(config)
+		} else {
+			_, singleThreadScore, _ = RunBenchmark(config)
+		}
 		result += formatScoreOutput(language, 1, fmt.Sprintf("%.2f", singleThreadScore))
 	}
 	// 多线程测试（如果需要且是多核系统）
 	if testThread == "multi" && runtime.NumCPU() > 1 {
 		time.Sleep(1 * time.Second)
 		config.NumThreads = runtime.NumCPU()
-		_, multiThreadScore, _ := RunBenchmark(config)
+		var multiThreadScore float64
+		if runtime.GOOS == "windows" {
+			_, multiThreadScore, _ = RunBenchmarkWin(config)
+		} else {
+			_, multiThreadScore, _ = RunBenchmark(config)
+		}
 		result += formatScoreOutput(language, runtime.NumCPU(), fmt.Sprintf("%.2f", multiThreadScore))
 	}
 	return result

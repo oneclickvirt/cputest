@@ -1,4 +1,3 @@
-//go:build cgo
 #ifndef CPU_BENCHMARK_H
 #define CPU_BENCHMARK_H
 
