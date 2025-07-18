@@ -67,18 +67,23 @@ int win_thread_create(win_thread_t *thread, void *(*start_routine)(void *), void
 {
     thread->start_routine = start_routine;
     thread->arg = arg;
+    thread->result = NULL;
     thread->handle = CreateThread(NULL, 0, win_thread_proc, thread, 0, NULL);
     return thread->handle ? 0 : -1;
 }
 
 int win_thread_join(win_thread_t *thread, void **retval)
 {
-    WaitForSingleObject(thread->handle, INFINITE);
-    if (retval)
+    if (thread->handle)
     {
-        *retval = thread->result;
+        WaitForSingleObject(thread->handle, INFINITE);
+        if (retval)
+        {
+            *retval = thread->result;
+        }
+        CloseHandle(thread->handle);
+        thread->handle = NULL;
     }
-    CloseHandle(thread->handle);
     return 0;
 }
 
@@ -157,8 +162,8 @@ typedef struct
 typedef struct
 {
     Config config;
-    atomic_uint_fast64_t *counter;
-    volatile int *done;
+    _Alignas(64) atomic_uint_fast64_t *counter; // 确保缓存行对齐
+    _Alignas(64) volatile int *done;            // 确保缓存行对齐
     double *latencies;
     volatile int *latency_count;
     int latency_capacity;
@@ -202,18 +207,22 @@ static void *worker(void *arg)
 #ifdef _WIN32
     win_timer_init();
 #endif
-    while (atomic_load(args->counter) < (uint64_t)args->config.max_events)
+
+    while (atomic_load_explicit(args->counter, memory_order_relaxed) < (uint64_t)args->config.max_events)
     {
         if (*args->done)
         {
             break;
         }
+
         struct timespec start, end;
         clock_gettime(CLOCK_MONOTONIC, &start);
         verify_primes(args->config.max_prime);
         clock_gettime(CLOCK_MONOTONIC, &end);
+
         double duration = (end.tv_sec - start.tv_sec) * 1000.0 +
                           (end.tv_nsec - start.tv_nsec) / 1000000.0;
+
         pthread_mutex_lock(args->latency_mutex);
         if (*args->latency_count < args->latency_capacity)
         {
@@ -221,7 +230,8 @@ static void *worker(void *arg)
             (*args->latency_count)++;
         }
         pthread_mutex_unlock(args->latency_mutex);
-        atomic_fetch_add(args->counter, 1);
+
+        atomic_fetch_add_explicit(args->counter, 1, memory_order_relaxed);
     }
     return NULL;
 }
@@ -231,34 +241,45 @@ BenchmarkResult *run_benchmark(Config config)
 #ifdef _WIN32
     win_timer_init();
 #endif
-    atomic_uint_fast64_t counter = 0;
-    volatile int done = 0;
+
+    // 使用对齐的内存分配
+    _Alignas(64) atomic_uint_fast64_t counter = 0;
+    _Alignas(64) volatile int done = 0;
     volatile int latency_count = 0;
     int latency_capacity = config.max_events;
+
     if (latency_capacity > MAX_LATENCY_SAMPLES)
     {
         latency_capacity = MAX_LATENCY_SAMPLES;
     }
+
     size_t required_bytes = (size_t)latency_capacity * sizeof(double);
     size_t max_safe_bytes = SIZE_MAX / 4;
+
     if (required_bytes > max_safe_bytes)
     {
         latency_capacity = (int)(max_safe_bytes / sizeof(double));
     }
+
     if (latency_capacity < 1000)
     {
         latency_capacity = 1000;
     }
+
     double *latencies = (double *)malloc(latency_capacity * sizeof(double));
     pthread_mutex_t latency_mutex = PTHREAD_MUTEX_INITIALIZER;
+
     pthread_mutex_init(&latency_mutex, NULL);
+
     if (!latencies)
     {
         pthread_mutex_destroy(&latency_mutex);
         return NULL;
     }
+
     pthread_t *threads = (pthread_t *)malloc(config.num_threads * sizeof(pthread_t));
     WorkerArgs *worker_args = (WorkerArgs *)malloc(config.num_threads * sizeof(WorkerArgs));
+
     if (!threads || !worker_args)
     {
         free(latencies);
@@ -267,8 +288,10 @@ BenchmarkResult *run_benchmark(Config config)
         pthread_mutex_destroy(&latency_mutex);
         return NULL;
     }
+
     struct timespec start_time, end_time;
     clock_gettime(CLOCK_MONOTONIC, &start_time);
+
     for (int i = 0; i < config.num_threads; i++)
     {
         worker_args[i].config = config;
@@ -278,14 +301,38 @@ BenchmarkResult *run_benchmark(Config config)
         worker_args[i].latency_count = &latency_count;
         worker_args[i].latency_capacity = latency_capacity;
         worker_args[i].latency_mutex = &latency_mutex;
-        pthread_create(&threads[i], NULL, worker, &worker_args[i]);
+
+        if (pthread_create(&threads[i], NULL, worker, &worker_args[i]) != 0)
+        {
+            // 创建线程失败，等待已创建的线程
+            done = 1;
+            for (int j = 0; j < i; j++)
+            {
+                pthread_join(threads[j], NULL);
+            }
+            free(latencies);
+            free(threads);
+            free(worker_args);
+            pthread_mutex_destroy(&latency_mutex);
+            return NULL;
+        }
     }
+
     portable_sleep_ms(config.duration_ms);
     done = 1;
+
+// 确保所有线程都能看到done的变化
+#ifdef _WIN32
+    MemoryBarrier();
+#else
+    __sync_synchronize();
+#endif
+
     for (int i = 0; i < config.num_threads; i++)
     {
         pthread_join(threads[i], NULL);
     }
+
     clock_gettime(CLOCK_MONOTONIC, &end_time);
     double duration = (end_time.tv_sec - start_time.tv_sec) +
                       (end_time.tv_nsec - start_time.tv_nsec) / 1000000000.0;
@@ -299,15 +346,19 @@ BenchmarkResult *run_benchmark(Config config)
         pthread_mutex_destroy(&latency_mutex);
         return NULL;
     }
-    result->total_events = atomic_load(&counter);
+
+    result->total_events = atomic_load_explicit(&counter, memory_order_acquire);
     result->events_per_second = (double)result->total_events / duration;
     result->latencies = latencies;
     result->latency_count = latency_count;
+
     free(threads);
     free(worker_args);
     pthread_mutex_destroy(&latency_mutex);
+
     return result;
 }
+
 void free_benchmark_result(BenchmarkResult *result)
 {
     if (result)
