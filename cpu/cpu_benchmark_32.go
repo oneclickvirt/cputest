@@ -7,7 +7,6 @@ package cpu
 // #include "cpu_benchmark.h"
 import "C"
 import (
-	"time"
 	"unsafe"
 )
 
