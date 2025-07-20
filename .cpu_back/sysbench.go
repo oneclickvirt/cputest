@@ -1,3 +1,5 @@
+//go:build ppc64 || mips || mipsle || s390x || (windows && (arm || arm64)) || ((freebsd || openbsd || netbsd || darwin) && (386 || amd64 || arm || arm64))
+
 package cpu
 
 import (
