@@ -104,11 +104,7 @@ func runInternalBenchmark(language, testThread string) string {
 	if testThread == "single" || testThread == "multi" {
 		config.NumThreads = 1
 		var singleThreadScore float64
-		if runtime.GOOS == "windows" || (runtime.GOOS == "linux" && runtime.GOARCH == "arm") {
-			_, singleThreadScore, _ = RunBenchmarkCustom(config)
-		} else {
-			_, singleThreadScore, _ = RunBenchmark(config)
-		}
+		_, singleThreadScore, _ = RunBenchmark(config)
 		result += formatScoreOutput(language, 1, fmt.Sprintf("%.2f", singleThreadScore))
 	}
 	// 多线程测试（如果需要且是多核系统）
@@ -116,11 +112,7 @@ func runInternalBenchmark(language, testThread string) string {
 		time.Sleep(1 * time.Second)
 		config.NumThreads = runtime.NumCPU()
 		var multiThreadScore float64
-		if runtime.GOOS == "windows" || (runtime.GOOS == "linux" && runtime.GOARCH == "arm") {
-			_, multiThreadScore, _ = RunBenchmarkCustom(config)
-		} else {
-			_, multiThreadScore, _ = RunBenchmark(config)
-		}
+		_, multiThreadScore, _ = RunBenchmark(config)
 		result += formatScoreOutput(language, runtime.NumCPU(), fmt.Sprintf("%.2f", multiThreadScore))
 	}
 	return result

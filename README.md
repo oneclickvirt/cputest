@@ -8,7 +8,7 @@ CPU测试模块 (CPU Test Module)
 
 # 功能(Features)
 
-- [x] 使用```sysbench```测试CPU得分，支持从原生环境，C重构，Go重构的代码进行测试
+- [x] 使用```sysbench```测试CPU得分，支持从原生环境，Go重构的代码进行测试
 - [x] 使用```geekbench```测试CPU得分
 - [x] 当原环境都无依赖时，将使用Golang原生实现的程序测试进行测试，但单线程一般会比sysbench原程序(LUA版本)低300个左右的事件数每秒(得分)(8.8%误差)
 - [x] 使用```winsat```测试CPU得分
