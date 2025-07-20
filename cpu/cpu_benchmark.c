@@ -188,7 +188,8 @@ BenchmarkResult *run_benchmark(Config config)
         latency_capacity = 1000;
     }
     double *latencies = (double *)malloc(latency_capacity * sizeof(double));
-    pthread_mutex_t latency_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t latency_mutex;
+    pthread_mutex_init(&latency_mutex, NULL);
 #ifdef _WIN32
     pthread_mutex_init(&latency_mutex, NULL);
 #endif
