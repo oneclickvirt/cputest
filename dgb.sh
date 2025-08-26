@@ -1,6 +1,6 @@
 #!/bin/bash
 #From https://github.com/oneclickvirt/cputest
-#2024.08.05
+#2025.08.26
 
 rm -rf /usr/bin/geekbench*
 arch=$(uname -m)
@@ -33,16 +33,14 @@ case "$2" in
     ;;
 esac
 
-# 检测本机是否存在IPV4网络，不存在时无法使用 geekbench 进行测试
 check_ipv4_available() {
     if ! curl -s 'https://browser.geekbench.com' --connect-timeout 5 >/dev/null; then
-        echo -e "No IPV4 network, can't test with geekbench, browser.geekbench.com only has IPv4, does not support IPv6, forcing to test with no result."
+        echo "No IPV4 network, can't test with geekbench, browser.geekbench.com only has IPv4, does not support IPv6, forcing to test with no result."
         exit 1
     fi
 }
 check_ipv4_available
 
-# 除了 geekbench 4 , 更高版本的 geekbench需要本机至少有 1 GB 内存
 check_memory() {
     if command -v free >/dev/null 2>&1; then
         mem=$(free -m | awk '/Mem/{print $2}')
@@ -69,14 +67,14 @@ check_memory
 
 check_cdn() {
   local o_url=$1
-  for cdn_url in "${cdn_urls[@]}"; do
+  for cdn_url in $cdn_urls; do
     if curl -sL -k "$cdn_url$o_url" --max-time 6 | grep -q "success" >/dev/null 2>&1; then
-      export cdn_success_url="$cdn_url"
+      cdn_success_url="$cdn_url"
       return
     fi
     sleep 0.5
   done
-  export cdn_success_url=""
+  cdn_success_url=""
 }
 
 check_cdn_file() {
@@ -88,7 +86,7 @@ check_cdn_file() {
   fi
 }
 
-cdn_urls=("https://cdn0.spiritlhl.top/" "http://cdn3.spiritlhl.net/" "http://cdn1.spiritlhl.net/" "http://cdn2.spiritlhl.net/")
+cdn_urls="https://cdn0.spiritlhl.top/ http://cdn3.spiritlhl.net/ http://cdn1.spiritlhl.net/ http://cdn2.spiritlhl.net/"
 check_cdn_file
 
 download_file() {
@@ -105,7 +103,6 @@ download_file() {
     return 0
 }
 
-# 下载对应文件
 case $gbv in
   gb4)
     case $arch in
