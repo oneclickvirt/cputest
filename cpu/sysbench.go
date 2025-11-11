@@ -52,6 +52,7 @@ func RunBenchmark(config Config) (uint64, float64, []float64) {
 	done := make(chan bool)
 	latencyChan := make(chan float64, 1000)
 	var latencies []float64
+	var collectorWg sync.WaitGroup
 	startTime := time.Now()
 	// 启动工作线程
 	for i := 0; i < config.NumThreads; i++ {
@@ -59,7 +60,9 @@ func RunBenchmark(config Config) (uint64, float64, []float64) {
 		go worker(config, &counter, &wg, done, latencyChan)
 	}
 	// 收集延迟数据
+	collectorWg.Add(1)
 	go func() {
+		defer collectorWg.Done()
 		for latency := range latencyChan {
 			latencies = append(latencies, latency)
 		}
@@ -69,6 +72,8 @@ func RunBenchmark(config Config) (uint64, float64, []float64) {
 	close(done)
 	wg.Wait()
 	close(latencyChan)
+	// 等待收集器完成
+	collectorWg.Wait()
 	duration := time.Since(startTime).Seconds()
 	eventsPerSecond := float64(counter) / duration
 	return counter, eventsPerSecond, latencies
