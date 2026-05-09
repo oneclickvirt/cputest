@@ -253,7 +253,6 @@ jobs:
               tar -xf gb.tar.gz
               cp "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench6"         "$BINS/geekbench"
               cp "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench_aarch64"  "$BINS/"
-              cp "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench_armv7"    "$BINS/"
               cp "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench.plar"     "$BINS/"
               ;;
 
