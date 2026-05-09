@@ -8,9 +8,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version: "stable"
       - name: Build and Test on Default Platform
@@ -33,7 +33,7 @@ jobs:
           fi
   release-binary:
     name: Release Go Binary
-    runs-on: ${{ (matrix.goos == 'windows' && (matrix.goarch == 'arm64' || matrix.goarch == 'arm')) && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     needs: build
     strategy:
       fail-fast: false
@@ -95,9 +95,9 @@ jobs:
             goarm: 7
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version: "stable"
       - name: Install base build tools and cross compilers
@@ -219,6 +219,61 @@ jobs:
                 echo "Using default system compiler for ${GOOS}-${GOARCH}" ;;
             esac
           fi
+      - name: Download Geekbench binaries for embedding
+        run: |
+          # Version matrix (update these when new releases are available):
+          #   GB4: x86_64 only
+          #   GB5: x86_64 + aarch64/armv7
+          #   GB6: x86_64 + aarch64/armv7  (preferred for modern platforms)
+          GB4_VER="4.4.4"
+          GB5_VER="5.5.1"
+          GB6_VER="6.7.1"
+          BASE="https://cdn.geekbench.com"
+          BINS="$GITHUB_WORKSPACE/cpu/geekbench_bins"
+          mkdir -p "$BINS"
+
+          case "${{ matrix.goos }}-${{ matrix.goarch }}" in
+
+            linux-amd64)
+              # Embed GB6 (latest) for x86_64
+              cd /tmp
+              wget -q "${BASE}/Geekbench-${GB6_VER}-Linux.tar.gz" -O gb.tar.gz \
+                || { echo "Geekbench GB6 download failed, skipping embed"; exit 0; }
+              tar -xf gb.tar.gz
+              cp "Geekbench-${GB6_VER}-Linux/geekbench6"        "$BINS/geekbench"
+              cp "Geekbench-${GB6_VER}-Linux/geekbench_x86_64"  "$BINS/"
+              cp "Geekbench-${GB6_VER}-Linux/geekbench.plar"    "$BINS/"
+              ;;
+
+            linux-arm64)
+              # Embed GB6 ARM Preview (latest) for aarch64
+              cd /tmp
+              wget -q "${BASE}/Geekbench-${GB6_VER}-LinuxARMPreview.tar.gz" -O gb.tar.gz \
+                || { echo "Geekbench GB6 ARM download failed, skipping embed"; exit 0; }
+              tar -xf gb.tar.gz
+              cp "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench6"         "$BINS/geekbench"
+              cp "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench_aarch64"  "$BINS/"
+              cp "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench_armv7"    "$BINS/"
+              cp "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench.plar"     "$BINS/"
+              ;;
+
+            linux-arm)
+              # Embed GB5 ARM Preview for armv7 (better glibc compatibility on 32-bit ARM)
+              cd /tmp
+              wget -q "${BASE}/Geekbench-${GB5_VER}-LinuxARMPreview.tar.gz" -O gb.tar.gz \
+                || { echo "Geekbench GB5 ARM download failed, skipping embed"; exit 0; }
+              tar -xf gb.tar.gz
+              cp "Geekbench-${GB5_VER}-LinuxARMPreview/geekbench5"         "$BINS/geekbench"
+              cp "Geekbench-${GB5_VER}-LinuxARMPreview/geekbench_aarch64"  "$BINS/"
+              cp "Geekbench-${GB5_VER}-LinuxARMPreview/geekbench_armv7"    "$BINS/"
+              cp "Geekbench-${GB5_VER}-LinuxARMPreview/geekbench.plar"     "$BINS/"
+              ;;
+
+            *)
+              # GB4 is x86_64-only and superseded by GB5/GB6; other platforms use PATH.
+              echo "No Geekbench binary to embed for ${{ matrix.goos }}/${{ matrix.goarch }}, will rely on PATH at runtime"
+              ;;
+          esac
       - name: Build Binary
         env:
           GOARM: ${{ matrix.goarm || '' }}

@@ -192,68 +192,20 @@ func formatScoreOutput(language string, threads int, score string) string {
 	}
 }
 
-// runGeekbenchCommand 执行 geekbench 命令进行测试
-func runGeekbenchCommand() (string, error) {
-	var command *exec.Cmd
-	command = exec.Command("geekbench", "--upload")
-	output, err := command.CombinedOutput()
-	return string(output), err
+// resolveGeekbenchBinary returns the path to the geekbench binary and, when the
+// embedded binary is used, the temp directory that the caller must remove.
+// It checks the system PATH first, then falls back to the embedded binary.
+func resolveGeekbenchBinary() (binPath, tmpDir string, err error) {
+	if path, lookErr := exec.LookPath("geekbench"); lookErr == nil {
+		return path, "", nil
+	}
+	return extractEmbeddedGeekbench()
 }
 
-// GeekBenchTest 调用 geekbench 执行CPU测试
-// 调用 geekbench 命令执行
-// https://github.com/masonr/yet-another-bench-script/blob/0ad4c4e85694dbcf0958d8045c2399dbd0f9298c/yabs.sh#L894
-func GeekBenchTest(language, testThread string) string {
-	if model.EnableLoger {
-		InitLogger()
-		defer Logger.Sync()
-	}
-	var result, singleScore, multiScore, link string
-	comCheck := exec.Command("geekbench", "--version")
-	// Geekbench 5.4.5 Tryout Build 503938 (corktown-master-build 6006e737ba)
-	output, err := comCheck.CombinedOutput()
-	version := string(output)
-	if err != nil {
-		logError("cannot match geekbench command: ", err)
-		return ""
-	}
-	if strings.Contains(version, "Geekbench 6") {
-		// 检测存在 /etc/os-release 文件且含 CentOS Linux 7 时，需要预先下载 GLIBC_2.27 才能使用 geekbench 6
-		file, err := os.Open("/etc/os-release")
-		defer file.Close()
-		if err == nil {
-			scanner := bufio.NewScanner(file)
-			isCentOS7 := false
-			for scanner.Scan() {
-				line := scanner.Text()
-				if strings.Contains(line, "CentOS Linux 7") {
-					isCentOS7 = true
-					break
-				}
-			}
-			if err := scanner.Err(); err == nil {
-				// 如果文件中包含 CentOS Linux 7，则打印提示信息
-				if isCentOS7 && language == "zh" {
-					return "需要预先下载 GLIBC_2.27 才能使用 geekbench 6"
-				} else if isCentOS7 && language != "zh" {
-					return "You need to pre-download GLIBC_2.27 to use geekbench 6."
-				}
-			}
-		}
-	}
-	tp, err := runGeekbenchCommand()
-	if err != nil {
-		logError("run geekbench command error: ", err)
-		return ""
-	}
-	// 解析 geekbench 执行结果
-	tempList := strings.Split(tp, "\n")
-	for _, line := range tempList {
-		if strings.Contains(line, "https://browser.geekbench.com") && strings.Contains(line, "cpu") {
-			link = strings.TrimSpace(line)
-			break
-		}
-	}
+// fetchGeekbenchScores fetches single-core and multi-core scores from the
+// geekbench results page. Returns empty strings on any error so callers can
+// still display the link even when score extraction fails.
+func fetchGeekbenchScores(link string) (singleScore, multiScore string) {
 	const (
 		userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36"
 		accept    = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
@@ -266,44 +218,114 @@ func GeekBenchTest(language, testThread string) string {
 	client.SetCommonHeader("Referer", referer)
 	resp, err := client.R().Get(link)
 	if err != nil {
-		logError("geekbench test link error: ", err)
-		return ""
+		logError("geekbench fetch scores error", err)
+		return "", ""
 	}
 	defer resp.Body.Close()
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		logError("read response body error: ", err)
-		return ""
-	}
-	body := string(b)
 	if resp.StatusCode != http.StatusOK {
 		if model.EnableLoger {
-			Logger.Info("geekbench test status code not OK")
+			Logger.Info("geekbench results page status code not OK")
 		}
-		return ""
+		return "", ""
 	}
-	doc, readErr := goquery.NewDocumentFromReader(strings.NewReader(body))
-	if readErr != nil {
-		logError("parse response body error: ", err)
-		return ""
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logError("geekbench fetch scores read body error", err)
+		return "", ""
 	}
-	textContent := doc.Find(".table-wrapper.cpu").Text()
-	resList := strings.Split(textContent, "\n")
-	for index, l := range resList {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(b)))
+	if err != nil {
+		logError("geekbench fetch scores parse body error", err)
+		return "", ""
+	}
+	resList := strings.Split(doc.Find(".table-wrapper.cpu").Text(), "\n")
+	for i, l := range resList {
+		if i == 0 {
+			continue
+		}
 		if strings.Contains(l, "Single-Core") {
-			singleScore = resList[index-1]
+			singleScore = strings.TrimSpace(resList[i-1])
 		} else if strings.Contains(l, "Multi-Core") {
-			multiScore = resList[index-1]
+			multiScore = strings.TrimSpace(resList[i-1])
 		}
 	}
-	if link != "" && singleScore != "" {
-		result += strings.TrimSpace(strings.ReplaceAll(version, "\n", "")) + "\n"
+	return singleScore, multiScore
+}
+
+// GeekBenchTest 调用 geekbench 执行CPU测试
+// https://github.com/masonr/yet-another-bench-script/blob/0ad4c4e85694dbcf0958d8045c2399dbd0f9298c/yabs.sh#L894
+func GeekBenchTest(language, testThread string) string {
+	if model.EnableLoger {
+		InitLogger()
+		defer Logger.Sync()
+	}
+
+	// Resolve geekbench binary: PATH first, then embedded binary.
+	geekbenchBin, tmpDir, err := resolveGeekbenchBinary()
+	if err != nil || geekbenchBin == "" {
+		logError("cannot find geekbench binary", fmt.Errorf("not in PATH and not embedded"))
+		return ""
+	}
+	if tmpDir != "" {
+		defer os.RemoveAll(tmpDir)
+	}
+
+	// Detect version.
+	// e.g. "Geekbench 5.4.5 Tryout Build 503938 (corktown-master-build 6006e737ba)"
+	versionOut, err := exec.Command(geekbenchBin, "--version").CombinedOutput()
+	if err != nil {
+		logError("geekbench version check error", err)
+		return ""
+	}
+	version := string(versionOut)
+
+	// Geekbench 6 cannot run on CentOS 7 without GLIBC_2.27.
+	if strings.Contains(version, "Geekbench 6") {
+		if file, openErr := os.Open("/etc/os-release"); openErr == nil {
+			defer file.Close()
+			scanner := bufio.NewScanner(file)
+			for scanner.Scan() {
+				if strings.Contains(scanner.Text(), "CentOS Linux 7") {
+					if language == "zh" {
+						return "需要预先下载 GLIBC_2.27 才能使用 geekbench 6"
+					}
+					return "You need to pre-download GLIBC_2.27 to use geekbench 6."
+				}
+			}
+		}
+	}
+
+	// Run the benchmark and capture the results URL.
+	runOut, err := exec.Command(geekbenchBin, "--upload").CombinedOutput()
+	if err != nil {
+		logError("run geekbench command error", err)
+		return ""
+	}
+
+	var link string
+	for _, line := range strings.Split(string(runOut), "\n") {
+		if strings.Contains(line, "https://browser.geekbench.com") && strings.Contains(line, "cpu") {
+			link = strings.TrimSpace(line)
+			break
+		}
+	}
+	if link == "" {
+		return ""
+	}
+
+	// Always output version and link.
+	result := strings.TrimSpace(strings.ReplaceAll(version, "\n", "")) + "\n"
+
+	// Try to fetch scores; show them when available but never suppress the link.
+	singleScore, multiScore := fetchGeekbenchScores(link)
+	if singleScore != "" {
 		result += "Single-Core Score: " + singleScore + "\n"
-		if multiScore != "" {
-			result += "Multi-Core Score: " + multiScore + "\n"
-		}
-		result += "Link: " + link + "\n"
 	}
+	if multiScore != "" {
+		result += "Multi-Core Score: " + multiScore + "\n"
+	}
+	result += "Link: " + link + "\n"
+
 	return result
 }
 

@@ -4,7 +4,11 @@
 
 rm -rf /usr/bin/geekbench*
 arch=$(uname -m)
-release_date="20240525"
+GB4_VER="4.4.4"
+GB5_VER="5.5.1"
+GB6_VER="6.3.0"
+RELEASE_TAG="20240525"
+GB_BASE="https://github.com/oneclickvirt/cputest/releases/download/${RELEASE_TAG}"
 mypwd=$(pwd)
 if [ ! -d "/usr/bin/" ]; then
     mkdir /usr/bin/
@@ -107,14 +111,14 @@ case $gbv in
   gb4)
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
-        download_file "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-4.4.4-Linux.tar.gz" "/usr/bin/geekbench.tar.gz"
+        download_file "${cdn_success_url}${GB_BASE}/Geekbench-${GB4_VER}-Linux.tar.gz" "/usr/bin/geekbench.tar.gz"
         cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
-        mv Geekbench-4.4.4-Linux/geekbench4 geekbench
-        mv Geekbench-4.4.4-Linux/geekbench_x86_64 geekbench_x86_64
-        mv Geekbench-4.4.4-Linux/geekbench.plar geekbench.plar
-        rm -rf Geekbench-4.4.4-Linux
+        mv "Geekbench-${GB4_VER}-Linux/geekbench4" geekbench
+        mv "Geekbench-${GB4_VER}-Linux/geekbench_x86_64" geekbench_x86_64
+        mv "Geekbench-${GB4_VER}-Linux/geekbench.plar" geekbench.plar
+        rm -rf "Geekbench-${GB4_VER}-Linux"
         cd $mypwd >/dev/null 2>&1
         ;;
       *)
@@ -126,26 +130,26 @@ case $gbv in
   gb5)
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
-        download_file "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-5.5.1-Linux.tar.gz" "/usr/bin/geekbench.tar.gz"
+        download_file "${cdn_success_url}${GB_BASE}/Geekbench-${GB5_VER}-Linux.tar.gz" "/usr/bin/geekbench.tar.gz"
         cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
-        mv Geekbench-5.5.1-Linux/geekbench5 geekbench
-        mv Geekbench-5.5.1-Linux/geekbench_x86_64 geekbench_x86_64
-        mv Geekbench-5.5.1-Linux/geekbench.plar geekbench.plar
-        rm -rf Geekbench-5.5.1-Linux
+        mv "Geekbench-${GB5_VER}-Linux/geekbench5" geekbench
+        mv "Geekbench-${GB5_VER}-Linux/geekbench_x86_64" geekbench_x86_64
+        mv "Geekbench-${GB5_VER}-Linux/geekbench.plar" geekbench.plar
+        rm -rf "Geekbench-${GB5_VER}-Linux"
         cd $mypwd >/dev/null 2>&1
         ;;
       "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
-        download_file "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-5.5.1-LinuxARMPreview.tar.gz" "/usr/bin/geekbench.tar.gz"
+        download_file "${cdn_success_url}${GB_BASE}/Geekbench-${GB5_VER}-LinuxARMPreview.tar.gz" "/usr/bin/geekbench.tar.gz"
         cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
-        mv Geekbench-5.5.1-LinuxARMPreview/geekbench5 geekbench
-        mv Geekbench-5.5.1-LinuxARMPreview/geekbench_aarch64 geekbench_aarch64
-        mv Geekbench-5.5.1-LinuxARMPreview/geekbench_armv7 geekbench_armv7
-        mv Geekbench-5.5.1-LinuxARMPreview/geekbench.plar geekbench.plar
-        rm -rf Geekbench-5.5.1-LinuxARMPreview
+        mv "Geekbench-${GB5_VER}-LinuxARMPreview/geekbench5" geekbench
+        mv "Geekbench-${GB5_VER}-LinuxARMPreview/geekbench_aarch64" geekbench_aarch64
+        mv "Geekbench-${GB5_VER}-LinuxARMPreview/geekbench_armv7" geekbench_armv7
+        mv "Geekbench-${GB5_VER}-LinuxARMPreview/geekbench.plar" geekbench.plar
+        rm -rf "Geekbench-${GB5_VER}-LinuxARMPreview"
         cd $mypwd >/dev/null 2>&1
         ;;
       *)
@@ -157,26 +161,26 @@ case $gbv in
   gb6)
     case $arch in
       "x86_64" | "x86" | "amd64" | "x64")
-        download_file "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-6.3.0-Linux.tar.gz" "/usr/bin/geekbench.tar.gz"
+        download_file "${cdn_success_url}${GB_BASE}/Geekbench-${GB6_VER}-Linux.tar.gz" "/usr/bin/geekbench.tar.gz"
         cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
-        mv Geekbench-6.3.0-Linux/geekbench6 geekbench
-        mv Geekbench-6.3.0-Linux/geekbench_x86_64 geekbench_x86_64
-        mv Geekbench-6.3.0-Linux/geekbench.plar geekbench.plar
-        rm -rf Geekbench-6.3.0-Linux
+        mv "Geekbench-${GB6_VER}-Linux/geekbench6" geekbench
+        mv "Geekbench-${GB6_VER}-Linux/geekbench_x86_64" geekbench_x86_64
+        mv "Geekbench-${GB6_VER}-Linux/geekbench.plar" geekbench.plar
+        rm -rf "Geekbench-${GB6_VER}-Linux"
         cd $mypwd >/dev/null 2>&1
         ;;
       "armv7l" | "armv8" | "armv8l" | "aarch64" | "arm64")
-        download_file "${cdn_success_url}https://github.com/oneclickvirt/cputest/releases/download/${release_date}/Geekbench-6.3.0-LinuxARMPreview.tar.gz" "/usr/bin/geekbench.tar.gz"
+        download_file "${cdn_success_url}${GB_BASE}/Geekbench-${GB6_VER}-LinuxARMPreview.tar.gz" "/usr/bin/geekbench.tar.gz"
         cd /usr/bin >/dev/null 2>&1
         chmod 777 geekbench.tar.gz
         tar -xvf geekbench.tar.gz
-        mv Geekbench-6.3.0-LinuxARMPreview/geekbench6 geekbench
-        mv Geekbench-6.3.0-LinuxARMPreview/geekbench_aarch64 geekbench_aarch64
-        mv Geekbench-6.3.0-LinuxARMPreview/geekbench_armv7 geekbench_armv7
-        mv Geekbench-6.3.0-LinuxARMPreview/geekbench.plar geekbench.plar
-        rm -rf Geekbench-6.3.0-LinuxARMPreview
+        mv "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench6" geekbench
+        mv "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench_aarch64" geekbench_aarch64
+        mv "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench_armv7" geekbench_armv7
+        mv "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench.plar" geekbench.plar
+        rm -rf "Geekbench-${GB6_VER}-LinuxARMPreview"
         cd $mypwd >/dev/null 2>&1
         ;;
       *)

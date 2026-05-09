@@ -87,6 +87,12 @@ go get github.com/oneclickvirt/cputest@v0.0.12-20251111095842
 
 个人更推荐使用```sysbench```进行测试，```geekbench```测试的基准线随着版本不同是不一样的(对标版本初期最强劲的Intel的CPU)，而```sysbench```的基准线一直是5秒内算素数，不存在变动。(同等条件下```geekbench```需要测试至少2分钟)
 
+### geekbench 二进制内嵌说明
+
+对于 **linux-amd64** 和 **linux-arm64** 平台，官方发布的二进制已通过 GitHub Actions 将 Geekbench 5.5.1 嵌入其中，无需手动安装即可直接使用 `-m geekbench` 进行测试。
+
+其他平台（如 Windows、macOS、FreeBSD 及 Linux 其他架构）的二进制不含内嵌 Geekbench，若需使用请参考下方手动安装方式。
+
 ### 检测本机内存大小以及开设虚拟内存
 
 同等测试环境下，```sysbench```测试没有最低内存大小需求，而```geekbench```有最低内存大小需求(至少1GB内存)。
@@ -105,9 +111,9 @@ Swap:             0           0           0
 
 看到```free```那一列的大小上下加起来不足```1512```时，输入数字```1```选择添加虚拟内存，然后输入```1512```增加虚拟内存。
 
-### 下载文件
+### 手动安装 geekbench（可选）
 
-如需使用```geekbench```请事先执行
+若需在不含内嵌 Geekbench 的平台上使用，或需要指定 gb4/gb5/gb6 版本，可手动执行
 
 ```
 curl -L https://raw.githubusercontent.com/oneclickvirt/cputest/main/dgb.sh -o dgb.sh && chmod +x dgb.sh
