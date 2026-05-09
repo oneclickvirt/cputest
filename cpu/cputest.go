@@ -276,9 +276,14 @@ func GeekBenchTest(language, testThread string) string {
 		logError("cannot find geekbench binary", fmt.Errorf("not in PATH and not embedded"))
 		return ""
 	}
-	if tmpDir != "" {
-		defer os.RemoveAll(tmpDir)
-	}
+	// Use a closure so that the cleanup path is updated if we later switch to
+	// a freshly-downloaded binary.
+	cleanDir := tmpDir
+	defer func() {
+		if cleanDir != "" {
+			os.RemoveAll(cleanDir)
+		}
+	}()
 
 	// Detect version.
 	// e.g. "Geekbench 5.4.5 Tryout Build 503938 (corktown-master-build 6006e737ba)"
@@ -286,18 +291,36 @@ func GeekBenchTest(language, testThread string) string {
 	// for --version on certain VPS/headless platforms (license checks, missing
 	// display libraries, etc.). If the binary still outputs a recognizable
 	// version string we continue and let --upload determine usability.
-	// If there is NO output at all the binary cannot initialize on this system
-	// and we return "" immediately so the caller falls back rather than
-	// wasting time on an --upload that will also fail.
+	// If there is NO output at all the embedded binary is either too old for
+	// this platform or otherwise broken.  In that case we download the latest
+	// Geekbench 6 from the official CDN and retry before giving up.
 	versionOut, versionErr := exec.Command(geekbenchBin, "--version").CombinedOutput()
 	version := strings.TrimSpace(string(versionOut))
 	if versionErr != nil {
 		logError("geekbench version check warning", versionErr)
 		if version == "" {
-			// Binary produced no output at all – it cannot initialize on this
-			// system (e.g. incompatible GLIBC, missing CPU features). Running
-			// --upload will likewise fail; return early so the caller falls back.
-			return ""
+			// Binary produced no output – try downloading the latest binary.
+			if cleanDir != "" {
+				os.RemoveAll(cleanDir)
+				cleanDir = ""
+			}
+			freshBin, freshDir, dlErr := downloadAndExtractGeekbench()
+			if dlErr != nil {
+				logError("geekbench download fallback failed", dlErr)
+				return ""
+			}
+			cleanDir = freshDir
+			geekbenchBin = freshBin
+			// Re-run version check with the freshly downloaded binary.
+			versionOut2, versionErr2 := exec.Command(geekbenchBin, "--version").CombinedOutput()
+			version = strings.TrimSpace(string(versionOut2))
+			if versionErr2 != nil && version == "" {
+				logError("geekbench download fallback also failed", versionErr2)
+				return ""
+			}
+			if version == "" {
+				version = "Geekbench 6"
+			}
 		}
 		// version has some output but non-zero exit; this can happen on headless
 		// VPS platforms (license probes etc.). Continue and let --upload
