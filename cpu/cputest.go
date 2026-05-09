@@ -48,21 +48,7 @@ func SysBenchTest(language, testThread string) string {
 		defer Logger.Sync()
 	}
 	// 检查是否是 BSD 系列操作系统
-	isBSDSystem := false
-	// 检查 /etc/os-release 文件是否存在
-	if _, err := os.Stat("/etc/os-release"); err == nil {
-		// 读取文件内容
-		content, err := os.ReadFile("/etc/os-release")
-		if err == nil {
-			contentStr := string(content)
-			// 检查是否包含 BSD 相关标识
-			if strings.Contains(contentStr, "freebsd") ||
-				strings.Contains(contentStr, "openbsd") ||
-				strings.Contains(contentStr, "netbsd") {
-				isBSDSystem = true
-			}
-		}
-	}
+	isBSDSystem := runtime.GOOS == "freebsd" || runtime.GOOS == "openbsd" || runtime.GOOS == "netbsd"
 	// 如果是 BSD 系统，使用自实现的测试
 	if isBSDSystem {
 		return runInternalBenchmark(language, testThread)
@@ -78,17 +64,17 @@ func SysBenchTest(language, testThread string) string {
 	result := ""
 	// 单线程测试
 	singleScore, err := runAndParseSysBench("1", "5", version)
-	if err != nil {
-		logError("sysbench test single score error", err)
-		return ""
+	if err != nil || singleScore == "" {
+		logError("sysbench test single score error", fmt.Errorf("score extraction failed"))
+		return runInternalBenchmark(language, testThread)
 	}
 	result += formatScoreOutput(language, 1, singleScore)
 	// 如果需要多线程测试并且是多核系统
 	if testThread == "multi" && runtime.NumCPU() > 1 {
 		time.Sleep(1 * time.Second)
 		multiScore, err := runAndParseSysBench(fmt.Sprintf("%d", runtime.NumCPU()), "5", version)
-		if err != nil {
-			logError("sysbench test multi score error", err)
+		if err != nil || multiScore == "" {
+			logError("sysbench test multi score error", fmt.Errorf("score extraction failed"))
 			return result // 返回已有的单线程结果
 		}
 		result += formatScoreOutput(language, runtime.NumCPU(), multiScore)
@@ -118,6 +104,26 @@ func runInternalBenchmark(language, testThread string) string {
 	return result
 }
 
+// isNewSysbenchFormat 判断 sysbench 是否使用新的命令行格式（>= 1.0.18）
+func isNewSysbenchFormat(version string) bool {
+	// version string example: "sysbench 1.0.20 (using system LuaJIT 2.1.0-beta3)"
+	fields := strings.Fields(version)
+	if len(fields) < 2 {
+		return false
+	}
+	parts := strings.Split(fields[1], ".")
+	if len(parts) < 3 {
+		return false
+	}
+	major, errM := strconv.Atoi(parts[0])
+	minor, errMi := strconv.Atoi(parts[1])
+	patch, errP := strconv.Atoi(parts[2])
+	if errM != nil || errMi != nil || errP != nil {
+		return false
+	}
+	return major > 1 || (major == 1 && minor > 0) || (major == 1 && minor == 0 && patch >= 18)
+}
+
 // runSysBenchCommand 执行 sysbench 命令进行测试
 func runSysBenchCommand(numThreads, maxTime, version string) (string, error) {
 	// version <= 1.0.17
@@ -125,7 +131,7 @@ func runSysBenchCommand(numThreads, maxTime, version string) (string, error) {
 	// version >= 1.0.18
 	// sysbench cpu --threads=1 --cpu-max-prime=10000 --events=1000000 --time=5 run
 	var command *exec.Cmd
-	if strings.Contains(version, "1.0.18") || strings.Contains(version, "1.0.19") || strings.Contains(version, "1.0.20") {
+	if isNewSysbenchFormat(version) {
 		command = exec.Command("sysbench", "cpu", "--threads="+numThreads, "--cpu-max-prime=10000", "--events=1000000", "--time="+maxTime, "run")
 	} else {
 		command = exec.Command("sysbench", "--test=cpu", "--num-threads="+numThreads, "--cpu-max-prime=10000", "--max-requests=1000000", "--max-time="+maxTime, "run")
@@ -147,18 +153,19 @@ func runAndParseSysBench(threads, timeValue, version string) (string, error) {
 		if strings.Contains(line, "events per second:") {
 			temp := strings.Split(line, ":")
 			if len(temp) == 2 {
-				score = temp[1]
+				score = strings.TrimSpace(temp[1])
 				break
 			}
 		} else if score == "" && totalTime == "" && strings.Contains(line, "total time:") {
 			temp := strings.Split(line, ":")
 			if len(temp) == 2 {
-				totalTime = strings.ReplaceAll(temp[1], "s", "")
+				// 去掉末尾的 "s" 时间单位，同时去除首尾空格
+				totalTime = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(temp[1]), "s"))
 			}
 		} else if score == "" && totalEvents == "" && strings.Contains(line, "total number of events:") {
 			temp := strings.Split(line, ":")
 			if len(temp) == 2 {
-				totalEvents = temp[1]
+				totalEvents = strings.TrimSpace(temp[1])
 			}
 		}
 	}
@@ -176,6 +183,9 @@ func runAndParseSysBench(threads, timeValue, version string) (string, error) {
 		}
 		scoreFloat := totalEventsFloat / totalTimeFloat
 		score = strconv.FormatFloat(scoreFloat, 'f', 2, 64)
+	}
+	if score == "" {
+		return "", fmt.Errorf("could not extract sysbench score from output")
 	}
 	return score, nil
 }
@@ -347,14 +357,16 @@ func WinsatTest(language, testThread string) string {
 		tempList := strings.Split(string(output1), "\n")
 		for _, l := range tempList {
 			if strings.Contains(l, "CPU AES256") {
-				tempL := strings.Split(l, " ")
-				tempText := strings.TrimSpace(tempL[len(tempL)-2])
-				if language == "en" {
-					result += "CPU AES256 encrypt: "
-				} else {
-					result += "CPU AES256 加密: "
+				tempL := strings.Fields(l)
+				if len(tempL) >= 2 {
+					tempText := tempL[len(tempL)-2]
+					if language == "en" {
+						result += "CPU AES256 encrypt: "
+					} else {
+						result += "CPU AES256 加密: "
+					}
+					result += tempText + "MB/s" + "\n"
 				}
-				result += tempText + "MB/s" + "\n"
 			}
 		}
 	}
@@ -362,19 +374,21 @@ func WinsatTest(language, testThread string) string {
 	output2, err2 := cmd2.Output()
 	if err2 != nil {
 		logError("winsat cpu compression error: ", err2)
-		return ""
+		return result
 	} else {
 		tempList := strings.Split(string(output2), "\n")
 		for _, l := range tempList {
 			if strings.Contains(l, "CPU LZW") {
-				tempL := strings.Split(l, " ")
-				tempText := strings.TrimSpace(tempL[len(tempL)-2])
-				if language == "en" {
-					result += "CPU LZW Compression: "
-				} else {
-					result += "CPU LZW 压缩: "
+				tempL := strings.Fields(l)
+				if len(tempL) >= 2 {
+					tempText := tempL[len(tempL)-2]
+					if language == "en" {
+						result += "CPU LZW Compression: "
+					} else {
+						result += "CPU LZW 压缩: "
+					}
+					result += tempText + "MB/s" + "\n"
 				}
-				result += tempText + "MB/s" + "\n"
 			}
 		}
 	}
