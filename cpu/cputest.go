@@ -202,11 +202,24 @@ func formatScoreOutput(language string, threads int, score string) string {
 	}
 }
 
+// lookGeekbench searches PATH for common geekbench binary names used both by
+// dgb.sh (geekbench) and manually extracted official tarballs (geekbench6,
+// geekbench5, geekbench4).  Returns the full path or "".
+func lookGeekbench() string {
+	for _, name := range []string{"geekbench", "geekbench6", "geekbench5", "geekbench4"} {
+		if path, err := exec.LookPath(name); err == nil {
+			return path
+		}
+	}
+	return ""
+}
+
 // resolveGeekbenchBinary returns the path to the geekbench binary and, when the
 // embedded binary is used, the temp directory that the caller must remove.
-// It checks the system PATH first, then falls back to the embedded binary.
+// It checks the system PATH first (including dgb.sh-installed binaries), then
+// falls back to the embedded binary.
 func resolveGeekbenchBinary() (binPath, tmpDir string, err error) {
-	if path, lookErr := exec.LookPath("geekbench"); lookErr == nil {
+	if path := lookGeekbench(); path != "" {
 		return path, "", nil
 	}
 	return extractEmbeddedGeekbench()
@@ -299,17 +312,26 @@ func GeekBenchTest(language, testThread string) string {
 	if versionErr != nil {
 		logError("geekbench version check warning", versionErr)
 		if version == "" {
-			// Binary produced no output – try downloading the latest binary.
+			// Binary produced no output – first try any dgb/system-installed
+			// geekbench that may have appeared in PATH (geekbench6, geekbench5…),
+			// then fall back to downloading the latest from CDN.
 			if cleanDir != "" {
 				os.RemoveAll(cleanDir)
 				cleanDir = ""
 			}
-			freshBin, freshDir, dlErr := downloadAndExtractGeekbench()
-			if dlErr != nil {
-				logError("geekbench download fallback failed", dlErr)
-				return ""
+			var freshBin, freshDir string
+			var dlErr error
+			if sysBin := lookGeekbench(); sysBin != "" && sysBin != geekbenchBin {
+				// A different system binary exists; try it.
+				freshBin = sysBin
+			} else {
+				freshBin, freshDir, dlErr = downloadAndExtractGeekbench()
+				if dlErr != nil {
+					logError("geekbench download fallback failed", dlErr)
+					return ""
+				}
+				cleanDir = freshDir
 			}
-			cleanDir = freshDir
 			geekbenchBin = freshBin
 			// Re-run version check with the freshly downloaded binary.
 			versionOut2, versionErr2 := exec.Command(geekbenchBin, "--version").CombinedOutput()
