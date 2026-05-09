@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -202,6 +203,12 @@ func formatScoreOutput(language string, threads int, score string) string {
 	}
 }
 
+// fileExists reports whether a file exists and is not a directory.
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
+}
+
 // resolveGeekbenchBinary returns the path to the geekbench binary and, when the
 // embedded binary is used, the temp directory that the caller must remove.
 // It checks the system PATH first, then falls back to the embedded binary.
@@ -282,12 +289,29 @@ func GeekBenchTest(language, testThread string) string {
 
 	// Detect version.
 	// e.g. "Geekbench 5.4.5 Tryout Build 503938 (corktown-master-build 6006e737ba)"
-	versionOut, err := exec.Command(geekbenchBin, "--version").CombinedOutput()
-	if err != nil {
-		logError("geekbench version check error", err)
-		return ""
+	// NOTE: Some geekbench builds return a non-zero exit code (e.g. 255) even
+	// for --version on certain VPS/headless platforms (license checks, missing
+	// display libraries, etc.). Capture the output regardless and continue;
+	// the actual --upload call will surface a real failure if the binary is
+	// truly unusable on this system.
+	versionOut, versionErr := exec.Command(geekbenchBin, "--version").CombinedOutput()
+	version := strings.TrimSpace(string(versionOut))
+	if versionErr != nil {
+		logError("geekbench version check warning", versionErr)
+		if version == "" {
+			// No output at all – infer from adjacent helper binaries embedded
+			// alongside the launcher to pick the right display label.
+			dir := filepath.Dir(geekbenchBin)
+			switch {
+			case fileExists(filepath.Join(dir, "geekbench_x86_64")):
+				version = "Geekbench 6"
+			case fileExists(filepath.Join(dir, "geekbench_aarch64")) && !fileExists(filepath.Join(dir, "geekbench_armv7")):
+				version = "Geekbench 6"
+			default:
+				version = "Geekbench"
+			}
+		}
 	}
-	version := string(versionOut)
 
 	// Geekbench 6 cannot run on CentOS 7 without GLIBC_2.27.
 	if strings.Contains(version, "Geekbench 6") {
