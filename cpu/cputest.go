@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -203,12 +202,6 @@ func formatScoreOutput(language string, threads int, score string) string {
 	}
 }
 
-// fileExists reports whether a file exists and is not a directory.
-func fileExists(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && !info.IsDir()
-}
-
 // resolveGeekbenchBinary returns the path to the geekbench binary and, when the
 // embedded binary is used, the temp directory that the caller must remove.
 // It checks the system PATH first, then falls back to the embedded binary.
@@ -291,26 +284,24 @@ func GeekBenchTest(language, testThread string) string {
 	// e.g. "Geekbench 5.4.5 Tryout Build 503938 (corktown-master-build 6006e737ba)"
 	// NOTE: Some geekbench builds return a non-zero exit code (e.g. 255) even
 	// for --version on certain VPS/headless platforms (license checks, missing
-	// display libraries, etc.). Capture the output regardless and continue;
-	// the actual --upload call will surface a real failure if the binary is
-	// truly unusable on this system.
+	// display libraries, etc.). If the binary still outputs a recognizable
+	// version string we continue and let --upload determine usability.
+	// If there is NO output at all the binary cannot initialize on this system
+	// and we return "" immediately so the caller falls back rather than
+	// wasting time on an --upload that will also fail.
 	versionOut, versionErr := exec.Command(geekbenchBin, "--version").CombinedOutput()
 	version := strings.TrimSpace(string(versionOut))
 	if versionErr != nil {
 		logError("geekbench version check warning", versionErr)
 		if version == "" {
-			// No output at all – infer from adjacent helper binaries embedded
-			// alongside the launcher to pick the right display label.
-			dir := filepath.Dir(geekbenchBin)
-			switch {
-			case fileExists(filepath.Join(dir, "geekbench_x86_64")):
-				version = "Geekbench 6"
-			case fileExists(filepath.Join(dir, "geekbench_aarch64")) && !fileExists(filepath.Join(dir, "geekbench_armv7")):
-				version = "Geekbench 6"
-			default:
-				version = "Geekbench"
-			}
+			// Binary produced no output at all – it cannot initialize on this
+			// system (e.g. incompatible GLIBC, missing CPU features). Running
+			// --upload will likewise fail; return early so the caller falls back.
+			return ""
 		}
+		// version has some output but non-zero exit; this can happen on headless
+		// VPS platforms (license probes etc.). Continue and let --upload
+		// surface a real failure if the binary truly cannot run.
 	}
 
 	// Geekbench 6 cannot run on CentOS 7 without GLIBC_2.27.
