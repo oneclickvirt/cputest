@@ -225,20 +225,35 @@ jobs:
           #   GB4: x86_64 only
           #   GB5: x86_64 + aarch64/armv7
           #   GB6: x86_64 + aarch64/armv7  (preferred for modern platforms)
-          GB4_VER="4.4.4"
           GB5_VER="5.5.1"
           GB6_VER="6.7.1"
-          BASE="https://cdn.geekbench.com"
+          RELEASE_TAG="20240525"
+          BASE="https://github.com/oneclickvirt/cputest/releases/download/${RELEASE_TAG}"
           BINS="$GITHUB_WORKSPACE/cpu/geekbench_bins"
           mkdir -p "$BINS"
+
+          download_and_verify() {
+            local url="$1" output="$2" expected_sha256="$3"
+            wget -q "$url" -O "$output" || { echo "Download failed: $url"; return 1; }
+            if [ -n "$expected_sha256" ]; then
+              actual=$(sha256sum "$output" | awk '{print $1}')
+              if [ "$actual" != "$expected_sha256" ]; then
+                echo "sha256 mismatch for $output: expected $expected_sha256, got $actual"
+                return 1
+              fi
+            fi
+          }
 
           case "${{ matrix.goos }}-${{ matrix.goarch }}" in
 
             linux-amd64)
               # Embed GB6 (latest) for x86_64
               cd /tmp
-              wget -q "${BASE}/Geekbench-${GB6_VER}-Linux.tar.gz" -O gb.tar.gz \
-                || { echo "Geekbench GB6 download failed, skipping embed"; exit 0; }
+              download_and_verify \
+                "${BASE}/Geekbench-${GB6_VER}-Linux.tar.gz" \
+                gb.tar.gz \
+                "0ddca977deb6d9db4bd866485f9408e72e2869d0dea0737b18d4bfe472858ace" \
+                || { echo "Geekbench GB6 download/verify failed, skipping embed"; exit 0; }
               tar -xf gb.tar.gz
               cp "Geekbench-${GB6_VER}-Linux/geekbench6"        "$BINS/geekbench"
               cp "Geekbench-${GB6_VER}-Linux/geekbench_x86_64"  "$BINS/"
@@ -248,8 +263,11 @@ jobs:
             linux-arm64)
               # Embed GB6 ARM Preview (latest) for aarch64
               cd /tmp
-              wget -q "${BASE}/Geekbench-${GB6_VER}-LinuxARMPreview.tar.gz" -O gb.tar.gz \
-                || { echo "Geekbench GB6 ARM download failed, skipping embed"; exit 0; }
+              download_and_verify \
+                "${BASE}/Geekbench-${GB6_VER}-LinuxARMPreview.tar.gz" \
+                gb.tar.gz \
+                "6e59acb83e6dea3671e2e295365fc37c40fdd280cdbddd50acf248910e14a0e3" \
+                || { echo "Geekbench GB6 ARM download/verify failed, skipping embed"; exit 0; }
               tar -xf gb.tar.gz
               cp "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench6"         "$BINS/geekbench"
               cp "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench_aarch64"  "$BINS/"
@@ -259,7 +277,10 @@ jobs:
             linux-arm)
               # Embed GB5 ARM Preview for armv7 (better glibc compatibility on 32-bit ARM)
               cd /tmp
-              wget -q "${BASE}/Geekbench-${GB5_VER}-LinuxARMPreview.tar.gz" -O gb.tar.gz \
+              download_and_verify \
+                "${BASE}/Geekbench-${GB5_VER}-LinuxARMPreview.tar.gz" \
+                gb.tar.gz \
+                "" \
                 || { echo "Geekbench GB5 ARM download failed, skipping embed"; exit 0; }
               tar -xf gb.tar.gz
               cp "Geekbench-${GB5_VER}-LinuxARMPreview/geekbench5"         "$BINS/geekbench"
@@ -269,7 +290,7 @@ jobs:
               ;;
 
             *)
-              # GB4 is x86_64-only and superseded by GB5/GB6; other platforms use PATH.
+              # Other platforms use PATH or runtime download fallback.
               echo "No Geekbench binary to embed for ${{ matrix.goos }}/${{ matrix.goarch }}, will rely on PATH at runtime"
               ;;
           esac

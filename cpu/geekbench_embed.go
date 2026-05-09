@@ -75,7 +75,7 @@ func extractEmbeddedGeekbench() (binPath, tmpDir string, err error) {
 // The caller is responsible for removing tmpDir when done.
 func downloadAndExtractGeekbench() (binPath, tmpDir string, err error) {
 	const (
-		base = "https://cdn.geekbench.com"
+		base = "https://github.com/oneclickvirt/cputest/releases/download/20240525"
 		ver  = "6.7.1"
 	)
 

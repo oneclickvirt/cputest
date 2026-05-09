@@ -6,7 +6,7 @@ rm -rf /usr/bin/geekbench*
 arch=$(uname -m)
 GB4_VER="4.4.4"
 GB5_VER="5.5.1"
-GB6_VER="6.3.0"
+GB6_VER="6.7.1"
 RELEASE_TAG="20240525"
 GB_BASE="https://github.com/oneclickvirt/cputest/releases/download/${RELEASE_TAG}"
 mypwd=$(pwd)
