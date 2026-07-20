@@ -1,5 +1,5 @@
 package model
 
-const CpuTestVersion = "v0.0.12"
+const CpuTestVersion = "v0.0.13"
 
 var EnableLoger = false
