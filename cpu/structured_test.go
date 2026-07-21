@@ -2,6 +2,7 @@ package cpu
 
 import (
 	"context"
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -46,6 +47,14 @@ func TestRunStructuredUsesEffectiveThreadsAndTemperature(t *testing.T) {
 	}
 	if !result.Temperature.Available || result.Temperature.MaxC == nil || *result.Temperature.MaxC != 45 {
 		t.Fatalf("unexpected temperature: %+v", result.Temperature)
+	}
+}
+
+func TestRunStructuredClampsExtremePrimeLimit(t *testing.T) {
+	config := StructuredConfig{Threads: 1, Duration: time.Millisecond, MaxPrime: math.MaxInt}
+	config.MaxPrime = normalizeMaxPrime(config.MaxPrime, DefaultStructuredPrime)
+	if config.MaxPrime != MaxPrimeLimit {
+		t.Fatalf("structured prime limit was not clamped: %d", config.MaxPrime)
 	}
 }
 

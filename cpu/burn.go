@@ -30,15 +30,21 @@ func RunBurn(ctx context.Context, config BurnConfig) BurnResult {
 	}
 	result := BurnResult{SchemaVersion: "goecs.cpu/burn-v1", Status: "skipped"}
 	if config.Duration <= 0 {
-		result.Error = "explicit burn duration is not configured"
-		return result
+		// Preserve the historical zero-value skip while allowing an explicitly
+		// configured burn to use the bounded default duration.
+		if config.Threads <= 0 && config.MaxPrime <= 0 {
+			result.Error = "explicit burn duration is not configured"
+			return result
+		}
+		config.Duration = DefaultBurnDuration
+	}
+	if config.Duration > MaxBurnDuration {
+		config.Duration = MaxBurnDuration
 	}
 	if config.Threads <= 0 {
 		config.Threads = runtime.NumCPU()
 	}
-	if config.MaxPrime <= 0 {
-		config.MaxPrime = 50000
-	}
+	config.MaxPrime = normalizeMaxPrime(config.MaxPrime, DefaultBurnMaxPrime)
 	result.EffectiveThreads = min(config.Threads, effectiveCPUThreads())
 	runCtx, cancel := context.WithTimeout(ctx, config.Duration)
 	defer cancel()

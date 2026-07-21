@@ -55,9 +55,7 @@ func RunStructured(ctx context.Context, config StructuredConfig) StructuredResul
 	if config.Duration > 20*time.Second {
 		config.Duration = 20 * time.Second
 	}
-	if config.MaxPrime <= 0 {
-		config.MaxPrime = 10000
-	}
+	config.MaxPrime = normalizeMaxPrime(config.MaxPrime, DefaultStructuredPrime)
 	effective := min(config.Threads, effectiveCPUThreads())
 	result := StructuredResult{SchemaVersion: "goecs.cpu/v1", Status: "ok", RequestedThreads: config.Threads, EffectiveThreads: effective}
 	if err := ctx.Err(); err != nil {

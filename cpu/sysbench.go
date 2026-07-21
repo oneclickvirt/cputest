@@ -7,9 +7,14 @@ import (
 	"time"
 )
 
-
 // 完全按照 sysbench 的实现来验证质数 见 https://github.com/akopytov/sysbench/blob/master/src/tests/cpu/sb_cpu.c
 func verifyPrimes(maxPrime int) uint64 {
+	if maxPrime <= 0 {
+		return 0
+	}
+	if maxPrime > MaxPrimeLimit {
+		maxPrime = MaxPrimeLimit
+	}
 	var n uint64 = 0
 	// 从3开始验证到最大值
 	for c := 3; c < maxPrime; c++ {
