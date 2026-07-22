@@ -8,11 +8,11 @@ import (
 )
 
 func TestParseCLIOptions(t *testing.T) {
-	opts, err := parseCLI([]string{"--structured", "--duration", "250ms", "--threads", "3", "-t", "multi"})
+	opts, err := parseCLI([]string{"--structured", "--duration", "250ms", "--threads", "3"})
 	if err != nil {
 		t.Fatalf("parseCLI returned error: %v", err)
 	}
-	if !opts.jsonOutput || opts.duration != 250*time.Millisecond || opts.threads != 3 || opts.threadMode != "multi" {
+	if !opts.jsonOutput || opts.duration != 250*time.Millisecond || opts.threads != 3 {
 		t.Fatalf("unexpected options: %#v", opts)
 	}
 }
@@ -30,6 +30,30 @@ func TestHelpRetainsLegacyFlags(t *testing.T) {
 func TestParseCLIRejectsNegativeValues(t *testing.T) {
 	if _, err := parseCLI([]string{"--threads", "-1"}); err == nil {
 		t.Fatal("expected negative threads to be rejected")
+	}
+}
+
+func TestParseCLIRejectsInvalidIgnoredAndConflictingOptions(t *testing.T) {
+	for _, args := range [][]string{
+		{"-l", "fr"},
+		{"-m", "unknown"},
+		{"-t", "wide"},
+		{"--duration", "1s"},
+		{"--structured", "-l", "en"},
+		{"--structured", "--threads", "3", "-t", "multi"},
+		{"unexpected"},
+	} {
+		if _, err := parseCLI(args); err == nil {
+			t.Fatalf("expected arguments %v to be rejected", args)
+		}
+	}
+}
+
+func TestParseCLIHelpAndVersionIgnoreOtherInvalidValues(t *testing.T) {
+	for _, args := range [][]string{{"-h", "-l", "fr"}, {"-v", "-m", "unknown"}} {
+		if _, err := parseCLI(args); err != nil {
+			t.Fatalf("help/version arguments %v returned %v", args, err)
+		}
 	}
 }
 

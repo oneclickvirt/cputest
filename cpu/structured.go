@@ -2,6 +2,7 @@ package cpu
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -59,7 +60,7 @@ func RunStructured(ctx context.Context, config StructuredConfig) StructuredResul
 	effective := min(config.Threads, effectiveCPUThreads())
 	result := StructuredResult{SchemaVersion: "goecs.cpu/v1", Status: "ok", RequestedThreads: config.Threads, EffectiveThreads: effective}
 	if err := ctx.Err(); err != nil {
-		result.Status, result.Error = "canceled", err.Error()
+		result.Status, result.Error = structuredCPUStop(err)
 		return result
 	}
 	reader := config.TemperatureReader
@@ -95,9 +96,19 @@ func RunStructured(ctx context.Context, config StructuredConfig) StructuredResul
 		result.EventsPerSecond = float64(result.Events) / duration.Seconds()
 	}
 	if err := ctx.Err(); err != nil {
-		result.Status, result.Error = "canceled", err.Error()
+		result.Status, result.Error = structuredCPUStop(err)
 	}
 	return result
+}
+
+func structuredCPUStop(err error) (string, string) {
+	if errors.Is(err, context.Canceled) {
+		return "canceled", "canceled"
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return "timeout", "timeout"
+	}
+	return "error", "benchmark_failed"
 }
 
 func sampleTemperatures(ctx context.Context, reader func() []float64, done <-chan struct{}, result chan<- TemperatureResult) {

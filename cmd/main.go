@@ -22,6 +22,9 @@ type cliOptions struct {
 	language, testMethod, threadMode string
 	duration                         time.Duration
 	threads                          int
+	languageSet, methodSet           bool
+	threadModeSet                    bool
+	durationSet, threadsSet          bool
 }
 
 func parseCLI(args []string) (cliOptions, error) {
@@ -30,8 +33,53 @@ func parseCLI(args []string) (cliOptions, error) {
 	if err := fs.Parse(args); err != nil {
 		return opts, err
 	}
-	if opts.duration < 0 || opts.threads < 0 {
-		return opts, fmt.Errorf("duration and threads must not be negative")
+	if fs.NArg() != 0 {
+		return opts, fmt.Errorf("unexpected positional arguments: %s", strings.Join(fs.Args(), " "))
+	}
+	fs.Visit(func(current *flag.Flag) {
+		switch current.Name {
+		case "l":
+			opts.languageSet = true
+		case "m":
+			opts.methodSet = true
+		case "t":
+			opts.threadModeSet = true
+		case "duration":
+			opts.durationSet = true
+		case "threads":
+			opts.threadsSet = true
+		}
+	})
+	opts.language = strings.ToLower(strings.TrimSpace(opts.language))
+	opts.testMethod = strings.ToLower(strings.TrimSpace(opts.testMethod))
+	opts.threadMode = strings.ToLower(strings.TrimSpace(opts.threadMode))
+	if opts.help || opts.version {
+		return opts, nil
+	}
+	if opts.language != "" && opts.language != "en" && opts.language != "zh" {
+		return opts, fmt.Errorf("language must be en or zh")
+	}
+	if opts.testMethod != "" && opts.testMethod != "sysbench" && opts.testMethod != "geekbench" && !(runtime.GOOS == "windows" && opts.testMethod == "winsat") {
+		return opts, fmt.Errorf("unsupported CPU test method")
+	}
+	if opts.threadMode != "" && opts.threadMode != "single" && opts.threadMode != "multi" {
+		return opts, fmt.Errorf("thread mode must be single or multi")
+	}
+	if opts.jsonOutput {
+		if opts.languageSet || opts.methodSet {
+			return opts, fmt.Errorf("-l and -m are not used with structured output")
+		}
+		if opts.durationSet && (opts.duration <= 0 || opts.duration > 20*time.Second) {
+			return opts, fmt.Errorf("structured duration must be greater than zero and at most 20s")
+		}
+		if opts.threadsSet && opts.threads <= 0 {
+			return opts, fmt.Errorf("structured threads must be positive")
+		}
+		if opts.threadsSet && opts.threadModeSet {
+			return opts, fmt.Errorf("-threads and -t cannot be combined")
+		}
+	} else if opts.durationSet || opts.threadsSet {
+		return opts, fmt.Errorf("-duration and -threads require structured output")
 	}
 	return opts, nil
 }
@@ -88,10 +136,6 @@ func main() {
 		return
 	}
 	if action == "structured" {
-		if strings.TrimSpace(opts.testMethod) != "" {
-			fmt.Fprintln(os.Stderr, "-m/--test-method is only supported by legacy output")
-			os.Exit(2)
-		}
 		threads := opts.threads
 		if threads == 0 {
 			threads = 1
@@ -111,6 +155,9 @@ func main() {
 			return
 		}
 		fmt.Println(string(encoded))
+		if result.Status != "ok" {
+			os.Exit(1)
+		}
 		return
 	}
 	printLegacyHeader()
@@ -150,14 +197,14 @@ func main() {
 			res = "Invalid test method specified.\n"
 		}
 	}
-	fmt.Println("--------------------------------------------------")
+	fmt.Println(" --------------------------------------------------")
 	fmt.Print(indentLegacyOutput(res))
-	fmt.Println("--------------------------------------------------")
+	fmt.Println(" --------------------------------------------------")
 }
 
 func printLegacyHeader() {
 	go func() {
 		http.Get("https://hits.spiritlhl.net/cputest.svg?action=hit&title=Hits&title_bg=%23555555&count_bg=%230eecf8&edge_flat=false")
 	}()
-	fmt.Println(Green("项目地址:"), Yellow("https://github.com/oneclickvirt/cputest"))
+	fmt.Println(" "+Green("项目地址:"), Yellow("https://github.com/oneclickvirt/cputest"))
 }

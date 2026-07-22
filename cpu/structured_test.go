@@ -67,6 +67,15 @@ func TestRunStructuredCanceled(t *testing.T) {
 	}
 }
 
+func TestRunStructuredDeadline(t *testing.T) {
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+	result := RunStructured(ctx, StructuredConfig{})
+	if result.Status != "timeout" || result.Error != "timeout" {
+		t.Fatalf("unexpected timeout result: %+v", result)
+	}
+}
+
 func TestSampleTemperaturesRecordsOnePeakPerSnapshot(t *testing.T) {
 	var calls atomic.Int32
 	reader := func() []float64 {
