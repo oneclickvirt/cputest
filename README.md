@@ -17,6 +17,7 @@ CPU测试模块 (CPU Test Module)
 - [x] 以```-t```指定测试的线程数，可指定```single```或```multi```，默认不指定时使用单线程进行测试
 - [x] 全平台编译支持
 - [x] 下载```geekbench```前检测本机剩余内存是否足以进行测试，检测是否有IPV4网络以获取结果，自动切换下载的版本
+- [x] 支持纯 Go 结构化 CPU 持续计算测试，可指定时长和请求线程数，并按 affinity、cpuset、cgroup 配额确定有效线程
 
 # 使用(Usage)
 
@@ -53,12 +54,30 @@ Usage: cputest [options]
         Language parameter (en or zh)
   -log
         Enable logging
+  -json
+        Print the Go structured CPU result as JSON
+  -structured
+        Print the Go structured CPU result as JSON
+  -duration duration
+        Structured benchmark duration (for example 5s, at most 20s)
+  -threads int
+        Structured benchmark worker count
   -m string
         Specific Test Method (sysbench or geekbench)
   -t string
         Specific Test Thread Mode (single or multi)
   -v    show version
 ```
+
+结构化测试示例：
+
+```bash
+cputest -json -duration 20s -threads 4
+```
+
+结构化结果中的 `requested_threads` 是请求线程数，`effective_threads` 是结合 `GOMAXPROCS`、CPU affinity、cpuset 和 cgroup CPU 配额后实际使用的线程数。每个有效线程会持续执行固定上限的素数校验；完成一轮记为一个 `event`。`events_per_second` 是全部有效线程合计每秒完成的事件数，`events` 是总事件数，`duration_ms` 是实际运行时间。
+
+融合项目中显示的 `压力测试 : 20.005s / 2 线程 / 44.59 次/秒 / 892 次` 与这些字段一一对应：实际时间 / 有效线程 / 每秒事件 / 总事件。工作线程完成最后一轮计算会使实际时间略高于设定时间。比较结果时应保持组件版本、时长和线程条件一致。
 
 如果安装脚本未包含对应架构和系统，可自行到 https://github.com/oneclickvirt/cputest/releases/tag/output 查找对应架构和系统下载使用
 
@@ -72,7 +91,7 @@ rm -rf /usr/bin/cputest
 ## 在Golang中使用
 
 ```
-go get github.com/oneclickvirt/cputest@v0.0.13-20260720141924
+go get github.com/oneclickvirt/cputest@v0.0.18
 ```
 
 # 额外环境安装(非必须)
