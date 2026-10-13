@@ -1,36 +1,24 @@
 name: Build and Release
-on:
-  workflow_dispatch:
-
 jobs:
   build:
     name: Build and Test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version: "stable"
-      - name: Build and Test on Default Platform
-        run: |
-          go build -v ./...
-          go test -v ./...
-      - name: Delete Existing Release Assets
-        run: |
-          release_id=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/oneclickvirt/cputest/releases/tags/output" | jq -r '.id')
-          if [ "$release_id" != "null" ]; then
-            echo "Deleting existing release assets..."
-            assets=$(curl -s -H "Accept: application/vnd.github.v3+json" "https://api.github.com/repos/oneclickvirt/cputest/releases/$release_id/assets" | jq -r '.[] | .id')
-            for asset in $assets; do
-              echo "Deleting asset with ID: $asset"
-              curl -s -X DELETE -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/oneclickvirt/cputest/releases/assets/$asset"
-            done
-            sleep 30
-          else
-            echo "No existing release found, skipping asset deletion"
-          fi
+    - name: Checkout code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Set up Go
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version: stable
+    - name: Build and Test on Default Platform
+      run: |
+        go build -v ./...
+        go test -v ./...
+    - name: Preserve the last published assets until new binaries are built
+      run: |
+        echo "Existing release assets are retained until each validated replacement is uploaded."
+    env:
+      GOPROXY: https://proxy.golang.org|direct
   release-binary:
     name: Release Go Binary
     runs-on: ubuntu-latest
@@ -38,314 +26,338 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        goos: [windows, freebsd, openbsd, netbsd, linux, darwin]
-        goarch: [amd64, 386]
+        goos:
+        - windows
+        - freebsd
+        - openbsd
+        - netbsd
+        - linux
+        - darwin
+        goarch:
+        - amd64
+        - 386
         exclude:
-          - goarch: 386
-            goos: darwin
-          - goarch: 386
-            goos: freebsd
-          - goarch: 386
-            goos: openbsd
-          - goarch: 386
-            goos: netbsd
+        - goarch: 386
+          goos: darwin
+        - goarch: 386
+          goos: freebsd
+        - goarch: 386
+          goos: openbsd
+        - goarch: 386
+          goos: netbsd
         include:
-          - goos: windows
-            goarch: arm64
-          - goos: windows
-            goarch: arm
-            goarm: 7
-          - goos: darwin
-            goarch: arm64
-          - goos: linux
-            goarch: arm
-            goarm: 7
-          - goos: linux
-            goarch: arm64
-          - goos: linux
-            goarch: riscv64
-          - goos: linux
-            goarch: mips64
-          - goos: linux
-            goarch: mips64le
-          - goos: linux
-            goarch: mipsle
-          - goos: linux
-            goarch: mips
-          - goos: linux
-            goarch: ppc64
-          - goos: linux
-            goarch: ppc64le
-          - goos: linux
-            goarch: s390x
-          - goos: freebsd
-            goarch: arm64
-          - goos: freebsd
-            goarch: arm
-            goarm: 7
-          - goos: openbsd
-            goarch: arm64
-          - goos: openbsd
-            goarch: arm
-            goarm: 7
-          - goos: netbsd
-            goarch: arm64
-          - goos: netbsd
-            goarch: arm
-            goarm: 7
+        - goos: windows
+          goarch: arm64
+        - goos: windows
+          goarch: arm
+          goarm: 7
+        - goos: darwin
+          goarch: arm64
+        - goos: linux
+          goarch: arm
+          goarm: 7
+        - goos: linux
+          goarch: arm64
+        - goos: linux
+          goarch: riscv64
+        - goos: linux
+          goarch: mips64
+        - goos: linux
+          goarch: mips64le
+        - goos: linux
+          goarch: mipsle
+        - goos: linux
+          goarch: mips
+        - goos: linux
+          goarch: ppc64
+        - goos: linux
+          goarch: ppc64le
+        - goos: linux
+          goarch: s390x
+        - goos: freebsd
+          goarch: arm64
+        - goos: freebsd
+          goarch: arm
+          goarm: 7
+        - goos: openbsd
+          goarch: arm64
+        - goos: openbsd
+          goarch: arm
+          goarm: 7
+        - goos: netbsd
+          goarch: arm64
+        - goos: netbsd
+          goarch: arm
+          goarm: 7
     steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version: "stable"
-      - name: Install base build tools and cross compilers
-        run: |
-          sudo apt-get update
-          if [ "${{ runner.arch }}" == "ARM64" ]; then
-            sudo apt-get install -y build-essential clang lld llvm jq curl gcc-aarch64-linux-gnu
-          else
-            sudo apt-get install -y build-essential clang lld llvm jq curl gcc-multilib g++-multilib
-          fi
-          case "${{ matrix.goos }}-${{ matrix.goarch }}" in
+    - name: Load trusted network recovery helpers
+      shell: bash
+      run: |
+        set -euo pipefail
+        curl --fail --silent --show-error --location --connect-timeout 15 --max-time 90 --retry 3 --retry-max-time 180 --retry-connrefused "https://raw.githubusercontent.com/oneclickvirt/cputest/main/.github/scripts/ci_network.sh" -o "$RUNNER_TEMP/ci-network.sh"
+        curl --fail --silent --show-error --location --connect-timeout 15 --max-time 90 --retry 3 --retry-max-time 180 --retry-connrefused "https://raw.githubusercontent.com/oneclickvirt/cputest/main/.github/scripts/release_assets.py" -o "$RUNNER_TEMP/ci-release-assets.py"
+    - name: Checkout code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Set up Go
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version: stable
+    - name: Install base build tools and cross compilers
+      run: |
+        source "$RUNNER_TEMP/ci-network.sh"
+        sudo apt-get update
+        if [ "${{ runner.arch }}" == "ARM64" ]; then
+          sudo apt-get install -y build-essential clang lld llvm jq curl gcc-aarch64-linux-gnu
+        else
+          sudo apt-get install -y build-essential clang lld llvm jq curl gcc-multilib g++-multilib
+        fi
+        case "${{ matrix.goos }}-${{ matrix.goarch }}" in
+          linux-arm)
+            if [ "${{ runner.arch }}" != "ARM64" ]; then
+              sudo apt-get install -y gcc-arm-linux-gnueabihf
+            fi ;;
+          linux-arm64)
+            if [ "${{ runner.arch }}" != "ARM64" ]; then
+              sudo apt-get install -y gcc-aarch64-linux-gnu
+            fi ;;
+          linux-riscv64)
+            sudo apt-get install -y gcc-riscv64-linux-gnu ;;
+          linux-mips64)
+            sudo apt-get install -y gcc-mips64-linux-gnuabi64 ;;
+          linux-mips64le)
+            sudo apt-get install -y gcc-mips64el-linux-gnuabi64 ;;
+          linux-mipsle)
+            sudo apt-get install -y gcc-mipsel-linux-gnu ;;
+          linux-mips)
+            sudo apt-get install -y gcc-mips-linux-gnu ;;
+          linux-ppc64)
+            sudo apt-get install -y gcc-powerpc64-linux-gnu ;;
+          linux-ppc64le)
+            sudo apt-get install -y gcc-powerpc64le-linux-gnu ;;
+          windows-amd64|windows-386)
+            if [ "${{ runner.arch }}" != "ARM64" ]; then
+              sudo apt-get install -y gcc-mingw-w64-x86-64 gcc-mingw-w64-i686
+            fi ;;
+          freebsd-*|openbsd-*|netbsd-*)
+            sudo apt-get install -y clang lld ;;
+          *)
+            echo "No additional cross compiler needed" ;;
+        esac
+      shell: bash
+    - name: Determine CGO requirement
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+      run: |
+        if [[ ("$GOARCH" == "386" || "$GOARCH" == "arm") && !(("$GOOS" == "freebsd" || "$GOOS" == "openbsd" || "$GOOS" == "netbsd" || "$GOOS" == "darwin") && ("$GOARCH" == "386" || "$GOARCH" == "arm")) && !("$GOOS" == "windows" && "$GOARCH" == "arm") ]]; then
+          echo "NEED_CGO=1" >> $GITHUB_ENV
+        elif [[ ("$GOARCH" == "amd64" || "$GOARCH" == "arm64" || "$GOARCH" == "riscv64" || "$GOARCH" == "mips64" || "$GOARCH" == "mips64le" || "$GOARCH" == "ppc64le") && !(("$GOOS" == "freebsd" || "$GOOS" == "openbsd" || "$GOOS" == "netbsd" || "$GOOS" == "darwin") && ("$GOARCH" == "amd64" || "$GOARCH" == "arm64")) && !("$GOOS" == "windows" && "$GOARCH" == "arm64") ]]; then
+          echo "NEED_CGO=1" >> $GITHUB_ENV
+        else
+          echo "NEED_CGO=0" >> $GITHUB_ENV
+        fi
+    - name: Set cross compiler
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+        GOARM: ${{ matrix.goarm || '' }}
+        SYSROOT: ${{ env.SYSROOT || '' }}
+      run: |
+        set -e
+        if [ "$NEED_CGO" == "0" ]; then
+          echo "CGO_ENABLED=0" >> $GITHUB_ENV
+        else
+          echo "CGO_ENABLED=1" >> $GITHUB_ENV
+          case "${GOOS}-${GOARCH}" in
             linux-arm)
-              if [ "${{ runner.arch }}" != "ARM64" ]; then
-                sudo apt-get install -y gcc-arm-linux-gnueabihf
+              if [ "${{ runner.arch }}" == "ARM64" ]; then
+                echo "CC=gcc" >> $GITHUB_ENV
+              else
+                echo "CC=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV
               fi ;;
             linux-arm64)
-              if [ "${{ runner.arch }}" != "ARM64" ]; then
-                sudo apt-get install -y gcc-aarch64-linux-gnu
+              if [ "${{ runner.arch }}" == "ARM64" ]; then
+                echo "CC=gcc" >> $GITHUB_ENV
+              else
+                echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
               fi ;;
             linux-riscv64)
-              sudo apt-get install -y gcc-riscv64-linux-gnu ;;
+              echo "CC=riscv64-linux-gnu-gcc" >> $GITHUB_ENV ;;
             linux-mips64)
-              sudo apt-get install -y gcc-mips64-linux-gnuabi64 ;;
+              echo "CC=mips64-linux-gnuabi64-gcc" >> $GITHUB_ENV ;;
             linux-mips64le)
-              sudo apt-get install -y gcc-mips64el-linux-gnuabi64 ;;
+              echo "CC=mips64el-linux-gnuabi64-gcc" >> $GITHUB_ENV ;;
             linux-mipsle)
-              sudo apt-get install -y gcc-mipsel-linux-gnu ;;
+              echo "CC=mipsel-linux-gnu-gcc" >> $GITHUB_ENV ;;
             linux-mips)
-              sudo apt-get install -y gcc-mips-linux-gnu ;;
+              echo "CC=mips-linux-gnu-gcc" >> $GITHUB_ENV ;;
             linux-ppc64)
-              sudo apt-get install -y gcc-powerpc64-linux-gnu ;;
+              echo "CC=powerpc64-linux-gnu-gcc" >> $GITHUB_ENV ;;
             linux-ppc64le)
-              sudo apt-get install -y gcc-powerpc64le-linux-gnu ;;
-            windows-amd64|windows-386)
-              if [ "${{ runner.arch }}" != "ARM64" ]; then
-                sudo apt-get install -y gcc-mingw-w64-x86-64 gcc-mingw-w64-i686
+              echo "CC=powerpc64le-linux-gnu-gcc" >> $GITHUB_ENV ;;
+            freebsd-arm)
+              echo "CC=clang --target=armv7-unknown-freebsd --sysroot=${SYSROOT}" >> $GITHUB_ENV ;;
+            freebsd-arm64)
+              echo "CC=clang --target=aarch64-unknown-freebsd --sysroot=${SYSROOT}" >> $GITHUB_ENV ;;
+            freebsd-amd64)
+              echo "CC=clang --target=x86_64-unknown-freebsd --sysroot=${SYSROOT}" >> $GITHUB_ENV ;;
+            windows-amd64)
+              if [ "${{ runner.arch }}" == "ARM64" ]; then
+                echo "CGO_ENABLED=0" >> $GITHUB_ENV
+              else
+                echo "CC=x86_64-w64-mingw32-gcc" >> $GITHUB_ENV
               fi ;;
-            freebsd-*|openbsd-*|netbsd-*)
-              sudo apt-get install -y clang lld ;;
+            windows-386)
+              if [ "${{ runner.arch }}" == "ARM64" ]; then
+                echo "CGO_ENABLED=0" >> $GITHUB_ENV
+              else
+                echo "CC=i686-w64-mingw32-gcc" >> $GITHUB_ENV
+              fi ;;
+            darwin-amd64)
+              echo "CC=o64-clang" >> $GITHUB_ENV
+              echo "CXX=o64-clang++" >> $GITHUB_ENV ;;
+            darwin-arm64)
+              echo "CC=oa64-clang" >> $GITHUB_ENV
+              echo "CXX=oa64-clang++" >> $GITHUB_ENV ;;
             *)
-              echo "No additional cross compiler needed" ;;
+              echo "Using default system compiler for ${GOOS}-${GOARCH}" ;;
           esac
-      - name: Determine CGO requirement
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: |
-          if [[ ("$GOARCH" == "386" || "$GOARCH" == "arm") && !(("$GOOS" == "freebsd" || "$GOOS" == "openbsd" || "$GOOS" == "netbsd" || "$GOOS" == "darwin") && ("$GOARCH" == "386" || "$GOARCH" == "arm")) && !("$GOOS" == "windows" && "$GOARCH" == "arm") ]]; then
-            echo "NEED_CGO=1" >> $GITHUB_ENV
-          elif [[ ("$GOARCH" == "amd64" || "$GOARCH" == "arm64" || "$GOARCH" == "riscv64" || "$GOARCH" == "mips64" || "$GOARCH" == "mips64le" || "$GOARCH" == "ppc64le") && !(("$GOOS" == "freebsd" || "$GOOS" == "openbsd" || "$GOOS" == "netbsd" || "$GOOS" == "darwin") && ("$GOARCH" == "amd64" || "$GOARCH" == "arm64")) && !("$GOOS" == "windows" && "$GOARCH" == "arm64") ]]; then
-            echo "NEED_CGO=1" >> $GITHUB_ENV
-          else
-            echo "NEED_CGO=0" >> $GITHUB_ENV
-          fi
-      - name: Set cross compiler
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          GOARM: ${{ matrix.goarm || '' }}
-          SYSROOT: ${{ env.SYSROOT || '' }}
-        run: |
-          set -e
-          if [ "$NEED_CGO" == "0" ]; then
-            echo "CGO_ENABLED=0" >> $GITHUB_ENV
-          else
-            echo "CGO_ENABLED=1" >> $GITHUB_ENV
-            case "${GOOS}-${GOARCH}" in
-              linux-arm)
-                if [ "${{ runner.arch }}" == "ARM64" ]; then
-                  echo "CC=gcc" >> $GITHUB_ENV
-                else
-                  echo "CC=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV
-                fi ;;
-              linux-arm64)
-                if [ "${{ runner.arch }}" == "ARM64" ]; then
-                  echo "CC=gcc" >> $GITHUB_ENV
-                else
-                  echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-                fi ;;
-              linux-riscv64)
-                echo "CC=riscv64-linux-gnu-gcc" >> $GITHUB_ENV ;;
-              linux-mips64)
-                echo "CC=mips64-linux-gnuabi64-gcc" >> $GITHUB_ENV ;;
-              linux-mips64le)
-                echo "CC=mips64el-linux-gnuabi64-gcc" >> $GITHUB_ENV ;;
-              linux-mipsle)
-                echo "CC=mipsel-linux-gnu-gcc" >> $GITHUB_ENV ;;
-              linux-mips)
-                echo "CC=mips-linux-gnu-gcc" >> $GITHUB_ENV ;;
-              linux-ppc64)
-                echo "CC=powerpc64-linux-gnu-gcc" >> $GITHUB_ENV ;;
-              linux-ppc64le)
-                echo "CC=powerpc64le-linux-gnu-gcc" >> $GITHUB_ENV ;;
-              freebsd-arm)
-                echo "CC=clang --target=armv7-unknown-freebsd --sysroot=${SYSROOT}" >> $GITHUB_ENV ;;
-              freebsd-arm64)
-                echo "CC=clang --target=aarch64-unknown-freebsd --sysroot=${SYSROOT}" >> $GITHUB_ENV ;;
-              freebsd-amd64)
-                echo "CC=clang --target=x86_64-unknown-freebsd --sysroot=${SYSROOT}" >> $GITHUB_ENV ;;
-              windows-amd64)
-                if [ "${{ runner.arch }}" == "ARM64" ]; then
-                  echo "CGO_ENABLED=0" >> $GITHUB_ENV
-                else
-                  echo "CC=x86_64-w64-mingw32-gcc" >> $GITHUB_ENV
-                fi ;;
-              windows-386)
-                if [ "${{ runner.arch }}" == "ARM64" ]; then
-                  echo "CGO_ENABLED=0" >> $GITHUB_ENV
-                else
-                  echo "CC=i686-w64-mingw32-gcc" >> $GITHUB_ENV
-                fi ;;
-              darwin-amd64)
-                echo "CC=o64-clang" >> $GITHUB_ENV
-                echo "CXX=o64-clang++" >> $GITHUB_ENV ;;
-              darwin-arm64)
-                echo "CC=oa64-clang" >> $GITHUB_ENV
-                echo "CXX=oa64-clang++" >> $GITHUB_ENV ;;
-              *)
-                echo "Using default system compiler for ${GOOS}-${GOARCH}" ;;
-            esac
-          fi
-      - name: Download Geekbench binaries for embedding
-        run: |
-          # Version matrix (update these when new releases are available):
-          #   GB4: x86_64 only
-          #   GB5: x86_64 + aarch64/armv7
-          #   GB6: x86_64 + aarch64/armv7  (preferred for modern platforms)
-          GB5_VER="5.5.1"
-          GB6_VER="6.7.1"
-          RELEASE_TAG="20240525"
-          BASE="https://github.com/oneclickvirt/cputest/releases/download/${RELEASE_TAG}"
-          BINS="$GITHUB_WORKSPACE/cpu/geekbench_bins"
-          mkdir -p "$BINS"
+        fi
+    - name: Download Geekbench binaries for embedding
+      run: |
+        source "$RUNNER_TEMP/ci-network.sh"
+        # Version matrix (update these when new releases are available):
+        #   GB4: x86_64 only
+        #   GB5: x86_64 + aarch64/armv7
+        #   GB6: x86_64 + aarch64/armv7  (preferred for modern platforms)
+        GB5_VER="5.5.1"
+        GB6_VER="6.7.1"
+        RELEASE_TAG="20240525"
+        BASE="https://github.com/oneclickvirt/cputest/releases/download/${RELEASE_TAG}"
+        BINS="$GITHUB_WORKSPACE/cpu/geekbench_bins"
+        mkdir -p "$BINS"
 
-          download_and_verify() {
-            local url="$1" output="$2" expected_sha256="$3"
-            wget -q "$url" -O "$output" || { echo "Download failed: $url"; return 1; }
-            if [ -n "$expected_sha256" ]; then
-              actual=$(sha256sum "$output" | awk '{print $1}')
-              if [ "$actual" != "$expected_sha256" ]; then
-                echo "sha256 mismatch for $output: expected $expected_sha256, got $actual"
-                return 1
-              fi
+        download_and_verify() {
+          local url="$1" output="$2" expected_sha256="$3"
+          wget -q "$url" -O "$output" || { echo "Download failed: $url"; return 1; }
+          if [ -n "$expected_sha256" ]; then
+            actual=$(sha256sum "$output" | awk '{print $1}')
+            if [ "$actual" != "$expected_sha256" ]; then
+              echo "sha256 mismatch for $output: expected $expected_sha256, got $actual"
+              return 1
             fi
-          }
-
-          case "${{ matrix.goos }}-${{ matrix.goarch }}" in
-
-            linux-amd64)
-              # Embed GB6 (latest) for x86_64
-              cd /tmp
-              download_and_verify \
-                "${BASE}/Geekbench-${GB6_VER}-Linux.tar.gz" \
-                gb.tar.gz \
-                "0ddca977deb6d9db4bd866485f9408e72e2869d0dea0737b18d4bfe472858ace" \
-                || { echo "Geekbench GB6 download/verify failed, skipping embed"; exit 0; }
-              tar -xf gb.tar.gz
-              cp "Geekbench-${GB6_VER}-Linux/geekbench6"        "$BINS/geekbench"
-              cp "Geekbench-${GB6_VER}-Linux/geekbench_x86_64"  "$BINS/"
-              cp "Geekbench-${GB6_VER}-Linux/geekbench.plar"    "$BINS/"
-              ;;
-
-            linux-arm64)
-              # Embed GB6 ARM Preview (latest) for aarch64
-              cd /tmp
-              download_and_verify \
-                "${BASE}/Geekbench-${GB6_VER}-LinuxARMPreview.tar.gz" \
-                gb.tar.gz \
-                "6e59acb83e6dea3671e2e295365fc37c40fdd280cdbddd50acf248910e14a0e3" \
-                || { echo "Geekbench GB6 ARM download/verify failed, skipping embed"; exit 0; }
-              tar -xf gb.tar.gz
-              cp "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench6"         "$BINS/geekbench"
-              cp "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench_aarch64"  "$BINS/"
-              cp "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench.plar"     "$BINS/"
-              ;;
-
-            linux-arm)
-              # Embed GB5 ARM Preview for armv7 (better glibc compatibility on 32-bit ARM)
-              cd /tmp
-              download_and_verify \
-                "${BASE}/Geekbench-${GB5_VER}-LinuxARMPreview.tar.gz" \
-                gb.tar.gz \
-                "" \
-                || { echo "Geekbench GB5 ARM download failed, skipping embed"; exit 0; }
-              tar -xf gb.tar.gz
-              cp "Geekbench-${GB5_VER}-LinuxARMPreview/geekbench5"         "$BINS/geekbench"
-              cp "Geekbench-${GB5_VER}-LinuxARMPreview/geekbench_aarch64"  "$BINS/"
-              cp "Geekbench-${GB5_VER}-LinuxARMPreview/geekbench_armv7"    "$BINS/"
-              cp "Geekbench-${GB5_VER}-LinuxARMPreview/geekbench.plar"     "$BINS/"
-              ;;
-
-            *)
-              # Other platforms use PATH or runtime download fallback.
-              echo "No Geekbench binary to embed for ${{ matrix.goos }}/${{ matrix.goarch }}, will rely on PATH at runtime"
-              ;;
-          esac
-      - name: Build Binary
-        env:
-          GOARM: ${{ matrix.goarm || '' }}
-          CC: ${{ env.CC }}
-          CXX: ${{ env.CXX }}
-          CGO_ENABLED: ${{ env.CGO_ENABLED }}
-        run: |
-          mkdir -p bin
-          cd cmd
-          output_file="../bin/cputest-${{ matrix.goos }}-${{ matrix.goarch }}"
-          echo "::group::Building for ${{ matrix.goos }}/${{ matrix.goarch }}"
-          set +e
-          if [ "$CGO_ENABLED" == "0" ]; then
-            CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOARM=$GOARM \
-              go build -o "$output_file" \
-              -v \
-              -ldflags="-s -w" \
-              -trimpath \
-              .
-          else
-            CGO_ENABLED=1 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOARM=$GOARM \
-              go build -o "$output_file" \
-              -v \
-              -ldflags="-extldflags=-static -s -w" \
-              -trimpath \
-              .
           fi
-          build_exit=$?
-          echo "::endgroup::"
-          if [ $build_exit -ne 0 ]; then
-            echo "::warning::Build failed for ${{ matrix.goos }}/${{ matrix.goarch }}"
-            rm -f "$output_file" 2>/dev/null
-          else
-            echo "Successfully built: $output_file"
-          fi
-      - name: Upload Artifact
-        if: success() || failure()
-        run: |
-          release_id=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/oneclickvirt/cputest/releases/tags/output" | jq -r '.id')
-          if [ -z "$release_id" ] || [ "$release_id" = "null" ]; then
-            echo "::error::Failed to get release ID"
-            exit 1
-          fi
-          bin_path="./bin/cputest-${{ matrix.goos }}-${{ matrix.goarch }}"
-          if [ -f "$bin_path" ]; then
-            echo "Uploading $bin_path to release..."
-            curl -s \
-              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              -H "Content-Type: application/octet-stream" \
-              --data-binary @"$bin_path" \
-              "https://uploads.github.com/repos/oneclickvirt/cputest/releases/$release_id/assets?name=$(basename "$bin_path")"
-            echo "Upload completed for $bin_path"
-          else
-            echo "::warning::Skipping upload for ${{ matrix.goos }}/${{ matrix.goarch }} - no build artifact"
-          fi
+        }
+
+        case "${{ matrix.goos }}-${{ matrix.goarch }}" in
+
+          linux-amd64)
+            # Embed GB6 (latest) for x86_64
+            cd /tmp
+            download_and_verify \
+              "${BASE}/Geekbench-${GB6_VER}-Linux.tar.gz" \
+              gb.tar.gz \
+              "0ddca977deb6d9db4bd866485f9408e72e2869d0dea0737b18d4bfe472858ace" \
+              || { echo "Geekbench GB6 download/verify failed, skipping embed"; exit 0; }
+            tar -xf gb.tar.gz
+            cp "Geekbench-${GB6_VER}-Linux/geekbench6"        "$BINS/geekbench"
+            cp "Geekbench-${GB6_VER}-Linux/geekbench_x86_64"  "$BINS/"
+            cp "Geekbench-${GB6_VER}-Linux/geekbench.plar"    "$BINS/"
+            ;;
+
+          linux-arm64)
+            # Embed GB6 ARM Preview (latest) for aarch64
+            cd /tmp
+            download_and_verify \
+              "${BASE}/Geekbench-${GB6_VER}-LinuxARMPreview.tar.gz" \
+              gb.tar.gz \
+              "6e59acb83e6dea3671e2e295365fc37c40fdd280cdbddd50acf248910e14a0e3" \
+              || { echo "Geekbench GB6 ARM download/verify failed, skipping embed"; exit 0; }
+            tar -xf gb.tar.gz
+            cp "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench6"         "$BINS/geekbench"
+            cp "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench_aarch64"  "$BINS/"
+            cp "Geekbench-${GB6_VER}-LinuxARMPreview/geekbench.plar"     "$BINS/"
+            ;;
+
+          linux-arm)
+            # Embed GB5 ARM Preview for armv7 (better glibc compatibility on 32-bit ARM)
+            cd /tmp
+            download_and_verify \
+              "${BASE}/Geekbench-${GB5_VER}-LinuxARMPreview.tar.gz" \
+              gb.tar.gz \
+              "" \
+              || { echo "Geekbench GB5 ARM download failed, skipping embed"; exit 0; }
+            tar -xf gb.tar.gz
+            cp "Geekbench-${GB5_VER}-LinuxARMPreview/geekbench5"         "$BINS/geekbench"
+            cp "Geekbench-${GB5_VER}-LinuxARMPreview/geekbench_aarch64"  "$BINS/"
+            cp "Geekbench-${GB5_VER}-LinuxARMPreview/geekbench_armv7"    "$BINS/"
+            cp "Geekbench-${GB5_VER}-LinuxARMPreview/geekbench.plar"     "$BINS/"
+            ;;
+
+          *)
+            # Other platforms use PATH or runtime download fallback.
+            echo "No Geekbench binary to embed for ${{ matrix.goos }}/${{ matrix.goarch }}, will rely on PATH at runtime"
+            ;;
+        esac
+      shell: bash
+    - name: Build Binary
+      env:
+        GOARM: ${{ matrix.goarm || '' }}
+        CC: ${{ env.CC }}
+        CXX: ${{ env.CXX }}
+        CGO_ENABLED: ${{ env.CGO_ENABLED }}
+      run: |
+        mkdir -p bin
+        cd cmd
+        output_file="../bin/cputest-${{ matrix.goos }}-${{ matrix.goarch }}"
+        echo "::group::Building for ${{ matrix.goos }}/${{ matrix.goarch }}"
+        set +e
+        if [ "$CGO_ENABLED" == "0" ]; then
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOARM=$GOARM \
+            go build -o "$output_file" \
+            -v \
+            -ldflags="-s -w" \
+            -trimpath \
+            .
+        else
+          CGO_ENABLED=1 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} GOARM=$GOARM \
+            go build -o "$output_file" \
+            -v \
+            -ldflags="-extldflags=-static -s -w" \
+            -trimpath \
+            .
+        fi
+        build_exit=$?
+        echo "::endgroup::"
+        if [ $build_exit -ne 0 ]; then
+          echo "::warning::Build failed for ${{ matrix.goos }}/${{ matrix.goarch }}"
+          rm -f "$output_file" 2>/dev/null
+        else
+          echo "Successfully built: $output_file"
+        fi
+    - name: Upload Artifact
+      if: success() || failure()
+      run: |
+        source "$RUNNER_TEMP/ci-network.sh"
+        set -euo pipefail
+        shopt -s nullglob
+        files=(./bin/*)
+        [[ ${#files[@]} -gt 0 ]] || { echo "No release binaries were built." >&2; exit 1; }
+        gh release view output --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+          gh release create output --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title output --notes "Validated component binaries"
+        for file in "${files[@]}"; do
+          [[ -f "$file" && -s "$file" ]] || { echo "Invalid release binary." >&2; exit 1; }
+        done
+        python3 "$RUNNER_TEMP/ci-release-assets.py" output "${files[@]}"
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+    env:
+      GOPROXY: https://proxy.golang.org|direct
+    concurrency:
+      group: release-assets-${{ github.repository }}-${{ matrix.goos }}-${{ matrix.goarch }}
+      cancel-in-progress: false
+'on':
+  workflow_dispatch: null
+permissions:
+  contents: write
