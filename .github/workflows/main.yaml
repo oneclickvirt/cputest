@@ -327,13 +327,13 @@ jobs:
         build_exit=$?
         echo "::endgroup::"
         if [ $build_exit -ne 0 ]; then
-          echo "::warning::Build failed for ${{ matrix.goos }}/${{ matrix.goarch }}"
+          echo "::error::Build failed for ${{ matrix.goos }}/${{ matrix.goarch }}"
           rm -f "$output_file" 2>/dev/null
+          exit "$build_exit"
         else
           echo "Successfully built: $output_file"
         fi
     - name: Upload Artifact
-      if: success() || failure()
       run: |
         source "$RUNNER_TEMP/ci-network.sh"
         set -euo pipefail
