@@ -1,0 +1,11 @@
+{
+  "repository": "oneclickvirt/cputest",
+  "skill_name": "oneclickvirt-cputest",
+  "mcp": true,
+  "files": {
+    "agent/profile.json": "ea99a7645754155ad5791c3bd50f740356482ee9c43b20d0aced50231b44fb49",
+    "skills/oneclickvirt-cputest/SKILL.md": "ecbb183fb4ec259065adba849504280b020bc2db03357459ee9970024b0a519f",
+    "skills/oneclickvirt-cputest/SKILL_ZH.md": "0f93441760abf4954150908ed1605330ef719ba944d31e1936fe2081796c8171",
+    "agent/server.py": "d01416e6194095d90bf0d49ea29f7122969f0b74cf4d74ed0b1ce78753423a7d"
+  }
+}
